@@ -8,14 +8,23 @@
 #   [Image #1]    ctrl+g  ->  left untouched (any attachment placeholder)
 #   <empty>       ctrl+g  ->  no-op
 #
+# Every rewrite is given the tail of the CONVERSATION the draft was typed into,
+# so "fix the second one" resolves instead of coming back untouched. See
+# Get-SessionInfo below for how the calling session is identified.
+#
 # ctrl+g NEVER opens an editor. The only editor hand-off left is the git guard
 # below, which ctrl+g cannot reach (Claude Code's temp file is never named
 # COMMIT_EDITMSG, and Claude Code pins GIT_EDITOR for its own shells).
 #
 # Original text is kept at ~/.claude/prompt-boost.last.txt
 # Every invocation appends one line to ~/.claude/prompt-boost.log
+#
+#   -Probe    resolve the session and print the context block, rewrite nothing
 
-param([Parameter(Position = 0)][string]$File)
+param(
+    [Parameter(Position = 0)][string]$File,
+    [switch]$Probe
+)
 
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
@@ -38,6 +47,185 @@ $LogFile = Join-Path $HOME '.claude\prompt-boost.log'
 function Log {
     param($msg)
     "$(Get-Date -Format 'HH:mm:ss')  $msg" | Add-Content -Path $LogFile -Encoding UTF8
+}
+
+# --- conversation context ----------------------------------------------------
+# The draft arrives as a bare temp file - Claude Code tells the editor nothing
+# about which session produced it. Two facts make the caller recoverable:
+#
+#   1. ~/.claude/sessions/<pid>.json maps a live claude pid -> sessionId + cwd
+#   2. this script is a descendant of that pid (claude -> cmd -> powershell)
+#
+# so walking the parent-process chain until a pid has a session file identifies
+# the exact conversation. That precision matters: several sessions routinely run
+# in the same cwd, and "newest transcript in this directory" picks the wrong one.
+# Measured against real turns before setting these: assistant replies in this
+# transcript run 3.5k+ chars, so the original 800/320 caps elided ~78% of the
+# newest turn and threw away exactly the lists that references point at ("the
+# second one", "the stale ones"). The total cap was never the binding
+# constraint - it sat at 2960/4500 while per-turn caps did the damage.
+$CtxMaxTurns  = 8       # user/assistant turns handed to the rewriter
+$CtxRecentCap = 2500    # chars kept for the 2 newest turns - references point here
+$CtxOlderCap  = 700     # chars kept for the rest
+$CtxTotalCap  = 12000   # hard ceiling on the block; oldest turns dropped first
+
+function Get-SessionInfo {
+    $dir = Join-Path $HOME '.claude\sessions'
+    if (-not (Test-Path $dir)) { return $null }
+    # one bulk WMI query beats one filtered query per hop (~140ms vs ~600ms)
+    $map = @{}
+    Get-CimInstance -Query 'SELECT ProcessId,ParentProcessId FROM Win32_Process' |
+        ForEach-Object { $map[[int]$_.ProcessId] = [int]$_.ParentProcessId }
+    $p = $PID
+    for ($i = 0; $i -lt 12 -and $p; $i++) {
+        $f = Join-Path $dir "$p.json"
+        if (Test-Path $f) { return (Get-Content $f -Raw | ConvertFrom-Json) }
+        $p = $map[$p]
+    }
+    return $null
+}
+
+function Get-TranscriptPath {
+    param($sess)
+    if (-not $sess.sessionId) { return $null }
+    $root = Join-Path $HOME '.claude\projects'
+    if ($sess.cwd) {
+        # Claude Code's project slug: everything but letters, digits and dots
+        # becomes '-'  (C:\Users\VJ_Rodriguguez -> C--Users-VJ-Rodriguguez)
+        $slug = $sess.cwd -replace '[^A-Za-z0-9.]', '-'
+        $p = Join-Path $root "$slug\$($sess.sessionId).jsonl"
+        if (Test-Path $p) { return $p }
+    }
+    $hit = Get-ChildItem -Path $root -Filter "$($sess.sessionId).jsonl" -File -Recurse -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($hit) { return $hit.FullName }
+    return $null
+}
+
+function Get-MessageText {
+    param($msg)
+    if (-not $msg) { return $null }
+    $c = $msg.content
+    if ($c -is [string]) { return $c }
+    $parts = @()
+    foreach ($b in $c) { if ($b.type -eq 'text' -and $b.text) { $parts += [string]$b.text } }
+    if (-not $parts.Count) { return $null }
+    return ($parts -join "`n")
+}
+
+# Harness-injected text is not something the user said, and feeding it to the
+# rewriter is how a system-reminder ends up quoted back inside a prompt.
+function Get-CleanUserText {
+    param([string]$t)
+    $t = [Regex]::Replace($t, '(?s)<system-reminder>.*?</system-reminder>', '')
+    $t = [Regex]::Replace($t, '(?s)<command-(name|message|args)>.*?</command-\1>', '')
+    $t = [Regex]::Replace($t, '(?s)<local-command-(stdout|stderr)>.*?</local-command-\1>', '')
+    $t = $t.Trim()
+    if ($t.Length -eq 0 -or $t.StartsWith('<') -or $t.StartsWith('Caveat:')) { return $null }
+    return $t
+}
+
+function Get-Trimmed {
+    param([string]$t, [int]$max)
+    $t = ($t -replace '\s+', ' ').Trim()
+    if ($t.Length -le $max) { return $t }
+    # keep both ends: the setup is usually at the front, the list or the
+    # conclusion a reference points at is usually at the back
+    $head = [int]($max * 0.6)
+    $tail = $max - $head
+    return $t.Substring(0, $head).TrimEnd() + ' ... ' + $t.Substring($t.Length - $tail).TrimStart()
+}
+
+function Get-RecentTurns {
+    param([string]$path)
+    $bytes = 1MB
+    $len = 0
+    $fs = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    try {
+        $len = $fs.Length
+        if ($len -gt $bytes) { [void]$fs.Seek(-$bytes, [IO.SeekOrigin]::End) }
+        $sr = New-Object IO.StreamReader($fs, [Text.Encoding]::UTF8)
+        $text = $sr.ReadToEnd()
+    } finally { $fs.Dispose() }
+
+    $lines = $text -split "`n"
+    if ($len -gt $bytes -and $lines.Count -gt 1) { $lines = $lines[1..($lines.Count - 1)] }
+
+    $turns = New-Object Collections.ArrayList   # newest first
+    $asst  = New-Object Collections.ArrayList   # text blocks of one reply, in order
+
+    for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+        if ($turns.Count -ge $CtxMaxTurns) { break }
+        $ln = $lines[$i]
+        if ($ln.Length -lt 40) { continue }
+        # cheap string gates before the parse. PowerShell 5.1's ConvertFrom-Json
+        # is slow, and tool results are the biggest lines in the file - this is
+        # what keeps a 1MB tail from costing seconds.
+        if ($ln.Contains('"isSidechain":true')) { continue }
+        if ($ln.Contains('"toolUseResult"'))    { continue }
+        if ($ln.Contains('"isMeta":true'))      { continue }
+        $isUser = $ln.Contains('"type":"user"')
+        if (-not ($isUser -or $ln.Contains('"type":"assistant"'))) { continue }
+
+        try { $o = $ln | ConvertFrom-Json } catch { continue }
+        $txt = Get-MessageText $o.message
+        if (-not $txt) { continue }
+
+        if (-not $isUser) {
+            # a reply is written one line per content block, so a turn has to be
+            # reassembled from the consecutive assistant lines above its prompt
+            [void]$asst.Insert(0, $txt)
+            continue
+        }
+        if ($asst.Count) {
+            [void]$turns.Add(@{ role = 'assistant'; text = ($asst -join "`n") })
+            $asst.Clear()
+        }
+        $u = Get-CleanUserText $txt
+        if ($u) { [void]$turns.Add(@{ role = 'user'; text = $u }) }
+    }
+    if ($asst.Count -and $turns.Count -lt $CtxMaxTurns) {
+        [void]$turns.Add(@{ role = 'assistant'; text = ($asst -join "`n") })
+    }
+
+    $turns.Reverse()   # chronological
+    return $turns
+}
+
+function Get-ContextBlock {
+    $s = Get-SessionInfo
+    if (-not $s) { return $null }
+    $p = Get-TranscriptPath $s
+    if (-not $p) { return $null }
+    $turns = Get-RecentTurns $p
+    if (-not $turns -or $turns.Count -eq 0) { return $null }
+
+    $n = $turns.Count
+    $rendered = @()
+    for ($i = 0; $i -lt $n; $i++) {
+        # the newest turns get the bigger budget: "the second one" nearly always
+        # points at something in the last thing that was said
+        $cap = if ($i -ge $n - 2) { $CtxRecentCap } else { $CtxOlderCap }
+        $rendered += ('{0}: {1}' -f $turns[$i].role, (Get-Trimmed $turns[$i].text $cap))
+    }
+    while ($rendered.Count -gt 1 -and (($rendered -join "`n").Length -gt $CtxTotalCap)) {
+        $rendered = $rendered[1..($rendered.Count - 1)]
+    }
+    return [pscustomobject]@{
+        Text    = ($rendered -join "`n")
+        Turns   = $rendered.Count
+        Session = $s.sessionId
+    }
+}
+
+if ($Probe) {
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $c = Get-ContextBlock
+    if (-not $c) { Line 'no conversation context resolved' 203; exit 1 }
+    Line "session $($c.Session)  |  $($c.Turns) turns  |  $($c.Text.Length) chars  |  $('{0:N0}ms' -f $sw.Elapsed.TotalMilliseconds)" 45
+    Line ''
+    Line $c.Text 250
+    exit 0
 }
 
 if (-not $File -or -not (Test-Path $File)) { exit 0 }
@@ -98,11 +286,17 @@ if ($trim.Length -eq 0) { exit 0 }
 
 [IO.File]::WriteAllText($Backup, $orig)
 
+# Never let context-gathering break the rewrite: no session, no transcript or a
+# malformed line all degrade to the old context-free behaviour.
+$ctx = $null
+try { $ctx = Get-ContextBlock } catch { Log "context unavailable: $($_.Exception.Message)" }
+
 Line ''
 Say "$([char]0x256D)$([char]0x2500) " 240
 Say 'PROMPT BOOST ' 45
 Say "$Model " 111
 if ($withContext) { Say '+context ' 213 }
+if ($ctx) { Say "$($ctx.Turns) turns " 78 } else { Say 'no convo ' 214 }
 Line "$($trim.Length) chars" 244
 
 # --- build the call ---------------------------------------------------------
@@ -132,9 +326,15 @@ $psi.RedirectStandardError  = $true
 $psi.EnvironmentVariables['MAX_THINKING_TOKENS'] = '0'
 $psi.EnvironmentVariables['DISABLE_INTERLEAVED_THINKING'] = '1'
 
+# One shape for every call, so the rewriter never has to guess whether a block
+# is missing or empty. Conversation first, draft last: the thing to be rewritten
+# is the last thing the model reads.
+$convo = if ($ctx) { $ctx.Text } else { '(none available)' }
+$payload = "<recent_conversation>`n$convo`n</recent_conversation>`n`n<draft>`n$trim`n</draft>"
+
 $sw = [Diagnostics.Stopwatch]::StartNew()
 $proc = [Diagnostics.Process]::Start($psi)
-$proc.StandardInput.Write($trim)
+$proc.StandardInput.Write($payload)
 $proc.StandardInput.Close()
 $outTask = $proc.StandardOutput.ReadToEndAsync()
 $errTask = $proc.StandardError.ReadToEndAsync()
@@ -156,7 +356,35 @@ $err = $errTask.Result
 $clean = $out.Trim()
 if ($clean -match '^```[a-zA-Z]*\r?\n([\s\S]*?)\r?\n```$') { $clean = $Matches[1].Trim() }
 
+# Last line of defence: writing meta-commentary into the buffer is how a
+# clarifying question ends up submitted as a prompt.
+#
+# These patterns must match what the rewriter says TO THE USER, not what a
+# rewritten prompt legitimately says. A bare '^Can you' is too broad now that the
+# conversation is supplied - "can we make it faster" rightly comes back as
+# "Can you speed up X", and the old pattern threw that away. What actually marks
+# a failure is asking the user to supply something.
+$bad = @(
+    '^\s*(I need|I''ll need|I cannot|I can''t|To rewrite|Which one|Which of)'
+    '^\s*(Could|Can) you (please )?(clarify|specify|provide|confirm|tell me|share|paste|elaborate)'
+    '^\s*Please (provide|clarify|specify|confirm|paste|share)'
+    '(need|needs|require|requires|without) (more |additional |further )?(clarification|context|information about)'
+    "I'?ll rewrite|rewrite your (request|prompt)|your request as a"
+    '^\s*(Sure|Certainly|Here(''s| is) the)'
+)
+$looksMeta = $false
+foreach ($re in $bad) { if ($clean -imatch $re) { $looksMeta = $true; break } }
+
 [Console]::Write("`r$ESC[2K")
+
+if ($looksMeta) {
+    Log "REJECTED meta-output (kept original): $($clean.Substring(0, [Math]::Min(70, $clean.Length)) -replace '\s+', ' ')"
+    Say "$([char]0x2570)$([char]0x2500) " 240
+    Line 'not a rewrite - original kept' 214
+    Start-Sleep -Milliseconds 1500
+    exit 0
+}
+
 if ($proc.ExitCode -ne 0 -or $clean.Length -eq 0) {
     Say "$([char]0x2570)$([char]0x2500) " 240
     Line "boost failed (exit $($proc.ExitCode)) - prompt left untouched" 203
@@ -166,6 +394,8 @@ if ($proc.ExitCode -ne 0 -or $clean.Length -eq 0) {
 }
 
 [IO.File]::WriteAllText($File, $clean)
+Log ("ok {0:N1}s {1}->{2} chars  ctx {3}" -f $sw.Elapsed.TotalSeconds, $trim.Length, $clean.Length,
+     $(if ($ctx) { "$($ctx.Turns) turns/$($ctx.Text.Length) chars" } else { 'none' }))
 Say "$([char]0x2570)$([char]0x2500) " 240
 Say "$([char]0x2713) " 78
 Line "$('{0:N1}s' -f $sw.Elapsed.TotalSeconds)  $($trim.Length) $([char]0x2192) $($clean.Length) chars   (original saved to ~/.claude/prompt-boost.last.txt)" 244

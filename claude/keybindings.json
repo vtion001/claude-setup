@@ -1,0 +1,23 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-keybindings.json",
+  "$docs": "https://code.claude.com/docs/en/keybindings",
+  "bindings": [
+    {
+      "context": "Global",
+      "bindings": {
+        "ctrl+k d": "app:toggleReplTab",
+        "ctrl+k f": "app:toggleDiffNoiseFilter",
+        "ctrl+k b": "app:cycleDiffBase",
+        "ctrl+k s": "app:toggleDiffPreSession",
+
+        "ctrl+k t": "strip:new",
+        "ctrl+k n": "strip:next",
+        "ctrl+k p": "strip:previous",
+        "ctrl+k w": "strip:toggle",
+        "ctrl+k 1": "strip:jump1",
+        "ctrl+k 2": "strip:jump2",
+        "ctrl+k 3": "strip:jump3"
+      }
+    }
+  ]
+}
