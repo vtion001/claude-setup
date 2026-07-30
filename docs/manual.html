@@ -1,0 +1,244 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Claude Code Terminal Setup — Manual</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font: 10.5pt/1.5 "Segoe UI", system-ui, sans-serif;
+    color: #14171a; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  h1 { font-size: 23pt; margin: 0 0 2mm; letter-spacing: -.4pt; }
+  .sub { color: #5a6570; font-size: 10pt; margin-bottom: 7mm; }
+  h2 {
+    font-size: 13pt; margin: 8mm 0 2.5mm; padding-bottom: 1.4mm;
+    border-bottom: 2px solid #14171a; letter-spacing: -.2pt;
+  }
+  h3 { font-size: 10.5pt; margin: 5mm 0 1.5mm; color: #2b3138; }
+  p, li { margin: 0 0 2mm; }
+  ul { margin: 0 0 3mm; padding-left: 5mm; }
+  code, kbd, .mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: 9pt; }
+  code { background: #f1f3f5; padding: .4mm 1.1mm; border-radius: 2px; }
+  kbd {
+    background: #14171a; color: #fff; padding: .5mm 1.6mm;
+    border-radius: 2.5px; font-size: 8.6pt; white-space: nowrap;
+  }
+  pre {
+    background: #f7f8f9; border-left: 2.5px solid #b8c0c8; padding: 2.4mm 3mm;
+    margin: 0 0 3mm; overflow-wrap: break-word; white-space: pre-wrap;
+    font-family: Consolas, monospace; font-size: 8.7pt; line-height: 1.45;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 0 0 3.5mm; font-size: 9.4pt; }
+  th {
+    text-align: left; background: #14171a; color: #fff;
+    padding: 1.6mm 2.2mm; font-weight: 600; font-size: 9pt;
+  }
+  td { padding: 1.5mm 2.2mm; border-bottom: .4pt solid #dfe3e7; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  td:first-child { white-space: nowrap; }
+  .note {
+    background: #fff8e6; border-left: 2.5px solid #d99b1c;
+    padding: 2.4mm 3mm; margin: 0 0 3.5mm; font-size: 9.5pt;
+  }
+  .warn { background: #fdeeee; border-left-color: #c0392b; }
+  .ok   { background: #eef7ef; border-left-color: #3a8a45; }
+  .pill {
+    display: inline-block; background: #eceff2; border-radius: 8px;
+    padding: .3mm 2mm; font-size: 8.4pt; color: #4a5560; margin-left: 1.5mm;
+  }
+  footer { margin-top: 9mm; padding-top: 2mm; border-top: .4pt solid #dfe3e7;
+           color: #78838d; font-size: 8.4pt; }
+  .brk { page-break-before: always; }
+  .two { column-count: 2; column-gap: 7mm; }
+</style>
+
+<h1>Claude Code Terminal Setup</h1>
+<div class="sub">Operating manual — prompt rewriter, status line, panes &amp; sidebar<br>
+Machine: AGS-AIDEV001 · Claude Code 2.1.220 · Windows 11 + Windows Terminal</div>
+
+<div class="note ok"><strong>Nothing to set up per session.</strong> Everything lives in
+<code>~/.claude/</code>, which is user-level — it loads in every session and every project
+automatically. This manual is about <em>using</em> it.</div>
+
+<h2>1 · The prompt rewriter — <kbd>ctrl+g</kbd></h2>
+
+<p>Type a rough prompt, press <kbd>ctrl+g</kbd>, and it is replaced in place with a sharper
+version. Takes about 5–6 seconds. A spinner shows elapsed time.</p>
+
+<pre>make the login faster
+      ↓  ctrl+g
+Profile the login flow and identify what is making it slow — server response
+time, database queries, and frontend asset loading. Fix the biggest bottleneck
+you find and measure the before and after.</pre>
+
+<p>It reads the recent conversation, so references resolve:</p>
+
+<pre>push it   →   Sync and push the prompt-rewriter bundle to the private repo
+              at github.com/vtion001/claude-setup</pre>
+
+<h3>What it will and will not touch</h3>
+<table>
+  <tr><th>You typed</th><th>What happens</th></tr>
+  <tr><td>normal text</td><td>rewritten, sharper</td></tr>
+  <tr><td><code>+text</code></td><td>rewritten, also loading the project's own CLAUDE.md</td></tr>
+  <tr><td><code>/skills</code> · any <code>/cmd</code></td><td><strong>left alone</strong> — a reworded command stops resolving</td></tr>
+  <tr><td><code>[Image #1]</code> · <code>[Pasted text #2]</code></td><td><strong>left alone</strong> — rewording detaches the file</td></tr>
+  <tr><td><code>#note</code></td><td><strong>left alone</strong> — memory write</td></tr>
+  <tr><td>"do it", "the second one"</td><td>resolved from the conversation; left alone if genuinely unresolvable</td></tr>
+  <tr><td>empty</td><td>nothing happens</td></tr>
+</table>
+
+<div class="note"><strong>It never opens an editor.</strong> <code>$VISUAL</code> is the rewriter,
+so <kbd>ctrl+g</kbd> and <kbd>ctrl+x ctrl+e</kbd> both run it. There is no external-editor
+path from inside Claude Code any more — use the IDE extension if you need one.</div>
+
+<h3>Recovery</h3>
+<ul>
+  <li>Your text before the last rewrite: <code>~/.claude/prompt-boost.last.txt</code></li>
+  <li>One line per keypress, with the reason: <code>~/.claude/prompt-boost.log</code></li>
+</ul>
+
+<h2>2 · Status line</h2>
+
+<p>Three rows above the prompt, refreshing every 5 seconds. Every value is real
+telemetry — nothing is decorative.</p>
+
+<pre>╭─ VJ@AGS-AIDEV001 - Opus 5 - effort:HIGH - 05:14:39
+├─ CTX █░░░░░░░░░ 14% 135k/1.0M │ $57.45 │ 4h44m │ 5h ▓░░░░ 29% │ 7d ▓░░░░ 18%
+╰─ bob-ags   feat/tenancy-foundation ●129 │ ✚1061 ✖214 │ CPU 22% MEM 33.7/61.7G</pre>
+
+<table>
+  <tr><th>Row</th><th>Shows</th></tr>
+  <tr><td>Top</td><td>user@host, model, effort level, FAST/agent/remote badges, clock</td></tr>
+  <tr><td>Middle</td><td>context window used, session cost, elapsed, 5-hour and 7-day rate limits</td></tr>
+  <tr><td>Bottom</td><td>repo, branch, ahead/behind/dirty, lines added/removed, PR state, CPU/RAM</td></tr>
+</table>
+
+<p>Bars run green under 60%, amber under 85%, red above.</p>
+
+<h2 class="brk">3 · Keyboard reference</h2>
+
+<h3>Inside Claude Code — <kbd>ctrl+k</kbd> then a letter</h3>
+<p>These drive Claude Code's own diff panel and session tabs, which ship unbound.</p>
+<table>
+  <tr><th>Keys</th><th>Action</th></tr>
+  <tr><td><kbd>ctrl+g</kbd></td><td>rewrite the prompt you are typing</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>d</kbd></td><td>toggle the diff panel</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>f</kbd></td><td>show / hide tests in the diff</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>b</kbd></td><td>cycle the diff base</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>s</kbd></td><td>show / hide pre-session changes</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>t</kbd></td><td>new session tab</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>n</kbd> / <kbd>p</kbd></td><td>next / previous tab</td></tr>
+  <tr><td><kbd>ctrl+k</kbd> <kbd>1</kbd>–<kbd>3</kbd></td><td>jump to tab</td></tr>
+</table>
+<div class="note">The diff panel needs <strong>a git repo</strong> and a <strong>wide
+terminal</strong>. It declines silently otherwise — that is not a fault.</div>
+
+<h3>Panes — <kbd>alt+shift</kbd> + key</h3>
+<p>Windows Terminal, not Claude Code. The <code>alt+shift</code> prefix is deliberate:
+Claude Code itself owns plain <kbd>alt+p</kbd>/<kbd>o</kbd>/<kbd>t</kbd>/<kbd>w</kbd>/<kbd>v</kbd>/<kbd>j</kbd>
+and <kbd>alt+↑</kbd>/<kbd>alt+↓</kbd>.</p>
+<table>
+  <tr><th>Keys</th><th>Action</th></tr>
+  <tr><td><kbd>alt+shift+s</kbd></td><td><strong>open the sidebar pane</strong> (right, 32%)</td></tr>
+  <tr><td><kbd>alt+shift+e</kbd> / <kbd>o</kbd></td><td>split right / split down</td></tr>
+  <tr><td><kbd>alt+shift+←↑↓→</kbd></td><td>move focus between panes</td></tr>
+  <tr><td><kbd>alt+shift+,</kbd> / <kbd>.</kbd></td><td>resize the pane</td></tr>
+  <tr><td><kbd>alt+shift+z</kbd></td><td>zoom the focused pane full screen</td></tr>
+  <tr><td><kbd>alt+shift+w</kbd></td><td>close the pane</td></tr>
+  <tr><td><kbd>alt+shift+d</kbd></td><td>duplicate pane</td></tr>
+</table>
+
+<h2>4 · The sidebar</h2>
+
+<p>Claude Code has no file explorer and no way to view an arbitrary file — its only
+panel is hardcoded to git diffs. The sidebar fills both gaps from a pane beside it.
+Open it with <kbd>alt+shift+s</kbd>.</p>
+
+<table>
+  <tr><th>Mode</th><th>Shows</th></tr>
+  <tr><td>no target</td><td>file tree of the current repo, via <code>git ls-files</code> — so
+      <code>.gitignore</code> is respected and <code>node_modules</code> never appears</td></tr>
+  <tr><td>a target</td><td>that file with line numbers, re-rendering when it changes</td></tr>
+</table>
+
+<p>Point it at a file:</p>
+<pre>echo C:/path/to/file.php &gt; ~/.claude/sidebar.target   # show a file
+: &gt; ~/.claude/sidebar.target                          # back to the tree</pre>
+
+<p>Or simply ask Claude — <em>"show config/qarubric.php in the sidebar"</em> — and it writes
+that file for you.</p>
+
+<p>The root follows whichever project your newest live Claude Code session is in, so it
+tracks you across projects automatically. Override with <code>-Root</code>.</p>
+
+<div class="note"><strong>Still no in-app editor.</strong> Claude Code's binary has no
+text-editor component and one cannot be added. To edit, focus the sidebar pane and run
+<code>vim</code> or <code>nano</code> there.</div>
+
+<h2 class="brk">5 · Troubleshooting</h2>
+
+<table>
+  <tr><th>Symptom</th><th>Cause and fix</th></tr>
+  <tr><td>Rewrite takes &gt;10s</td>
+      <td><code>MAX_THINKING_TOKENS=0</code> should be set on the subprocess in
+      <code>prompt-boost.ps1</code>. Without it the model burns ~1,500 thinking tokens and
+      takes 13–26s instead of ~5s.</td></tr>
+  <tr><td>Rewriter asked a question<br>instead of rewriting</td>
+      <td>It could not resolve a reference. The script discards that output and keeps your
+      original — look for <code>REJECTED</code> in <code>prompt-boost.log</code>.</td></tr>
+  <tr><td>Status line blank</td>
+      <td>It exits silently on a JSON parse error. Test by hand (§6). A byte-order mark in
+      the payload will break it.</td></tr>
+  <tr><td>Background missing</td>
+      <td>Must be in <code>profiles.defaults</code>, not one profile. Check
+      <code>useAcrylic:false</code> and <code>opacity:100</code>. Windows Terminal reverts to
+      built-in defaults on any JSON error.</td></tr>
+  <tr><td>Boxes instead of glyphs</td>
+      <td>Set <code>$NERD = $false</code> near the top of <code>statusline.ps1</code>.</td></tr>
+  <tr><td>Diff panel will not open</td>
+      <td>Not a git repo, or the window is too narrow. Both are silent.</td></tr>
+  <tr><td>Pane keys do nothing</td>
+      <td>You are not in Windows Terminal — the VS Code integrated terminal and mintty do
+      not have these.</td></tr>
+</table>
+
+<h2>6 · Verifying it works</h2>
+<pre>powershell -NoProfile -File ~/.claude/statusline.ps1 &lt; ~/.claude/statusline.last.json
+powershell -NoProfile -File ~/.claude/prompt-boost.ps1 -Probe    # session + context
+tail -5 ~/.claude/prompt-boost.log</pre>
+<p>To capture a fresh status-line payload: <code>touch ~/.claude/statusline.debug</code>,
+restart, inspect <code>statusline.last.json</code>, then delete the flag file.</p>
+
+<h2>7 · Rebuilding on a new machine</h2>
+<pre>git clone https://github.com/vtion001/claude-setup
+cd claude-setup
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -DryRun   # preview
+powershell -ExecutionPolicy Bypass -File .\install.ps1           # apply</pre>
+<p>The installer restores <code>~/.claude/</code>, merges the Windows Terminal background and
+all pane bindings, rewrites this machine's hardcoded paths, and backs up anything it
+replaces. Then: run <code>claude</code>, <code>/login</code>, and restart Windows Terminal.</p>
+
+<div class="note warn"><strong>The export goes stale the moment anything changes here.</strong>
+Re-sync and push after touching <code>prompt-boost</code>, <code>sidebar</code>,
+<code>statusline</code> or the keybindings — otherwise a rebuild silently installs the old
+behaviour.</div>
+
+<h2>8 · Files</h2>
+<table>
+  <tr><th>Path</th><th>Purpose</th></tr>
+  <tr><td><code>~/.claude/prompt-boost.ps1</code></td><td>the <kbd>ctrl+g</kbd> rewriter</td></tr>
+  <tr><td><code>~/.claude/prompt-boost.system.md</code></td><td>its instructions and worked examples</td></tr>
+  <tr><td><code>~/.claude/prompt-boost.log</code></td><td>one line per keypress — check here first</td></tr>
+  <tr><td><code>~/.claude/prompt-boost.last.txt</code></td><td>your text before the last rewrite</td></tr>
+  <tr><td><code>~/.claude/statusline.ps1</code></td><td>the three-row status line</td></tr>
+  <tr><td><code>~/.claude/sidebar.ps1</code></td><td>the companion pane</td></tr>
+  <tr><td><code>~/.claude/sidebar.target</code></td><td>write a path here to display it</td></tr>
+  <tr><td><code>~/.claude/keybindings.json</code></td><td>the <kbd>ctrl+k</kbd> bindings</td></tr>
+  <tr><td><code>~/.claude/TERMINAL-SETUP.md</code></td><td>the same notes, in the terminal</td></tr>
+  <tr><td><code>~/.claude/settings.json</code></td><td>wires up <code>statusLine</code> and <code>VISUAL</code></td></tr>
+</table>
+
+<footer>
+Generated 31 July 2026 · Claude Code 2.1.220 · full source at github.com/vtion001/claude-setup
+</footer>

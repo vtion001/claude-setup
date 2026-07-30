@@ -30,16 +30,29 @@ $MaxFiles  = 400
 function C { param($t, [int]$n) "$ESC[38;5;${n}m$t$ESC[0m" }
 
 # Follow whatever project Claude Code is actually in.
+#
+# Measured at 43ms - by far the most expensive thing in the loop, and it almost
+# never changes. The sessions directory's own mtime moves whenever a session
+# file is written, so it is a sufficient cache key and costs ~1ms to read.
+$script:RootCache = $null
+$script:RootStamp = $null
 function Resolve-Root {
     if ($Root) { return $Root }
     $dir = Join-Path $HOME '.claude\sessions'
+    if (-not (Test-Path $dir)) { return $HOME }
+    $stamp = (Get-Item $dir).LastWriteTimeUtc.Ticks
+    if ($script:RootCache -and $stamp -eq $script:RootStamp) { return $script:RootCache }
+
+    $r = $HOME
     $s = Get-ChildItem $dir -Filter *.json -File |
          Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($s) {
         $j = Get-Content $s.FullName -Raw | ConvertFrom-Json
-        if ($j.cwd -and (Test-Path $j.cwd)) { return $j.cwd }
+        if ($j.cwd -and (Test-Path $j.cwd)) { $r = $j.cwd }
     }
-    return $HOME
+    $script:RootCache = $r
+    $script:RootStamp = $stamp
+    return $r
 }
 
 # git ls-files is both faster than walking the tree and already gitignore-aware,
@@ -90,7 +103,9 @@ function Get-FileView {
 
 # Redraw only when something actually changed - a pane that repaints every tick
 # flickers and makes the text unselectable.
-$lastKey = ''
+$lastKey = ""
+$lastBody = ""
+$lastHead = ""
 while ($true) {
     $root = Resolve-Root
     $target = $null
@@ -103,23 +118,42 @@ while ($true) {
     $rows = [Math]::Max(6, $size.Height - 4)
 
     if ($target) {
+        # a file has one authoritative stamp, so the cheap key is exact
         $stamp = (Get-Item -LiteralPath $target).LastWriteTimeUtc.Ticks
         $key   = "f|$target|$stamp|$rows"
         $head  = C (Split-Path $target -Leaf) 45
         $sub   = C (Split-Path $target -Parent) 240
     } else {
-        $key  = "t|$root|$rows|" + ((Get-Item $root).LastWriteTimeUtc.Ticks)
+        # A directory mtime only moves for top-level changes, and .git/index only
+        # for git operations, so neither is sufficient on its own. Rather than
+        # force a periodic redraw - which would flicker and break selection - use
+        # them to decide when to RECOMPUTE, then redraw only if the rendered text
+        # actually differs. git ls-files is 66ms on a 947-file repo, so a 3s
+        # recompute floor is affordable and catches untracked edits too.
+        $stamp = (Get-Item $root).LastWriteTimeUtc.Ticks
+        $idx = Join-Path $root '.git\index'
+        if (Test-Path $idx) { $stamp = "$stamp/" + (Get-Item $idx).LastWriteTimeUtc.Ticks }
+        $key  = "t|$root|$rows|$stamp|" + [int]([Diagnostics.Stopwatch]::GetTimestamp() /
+                                                 ([Diagnostics.Stopwatch]::Frequency * 3))
         $head = C (Split-Path $root -Leaf) 45
         $sub  = C $root 240
     }
+
     if ($key -ne $lastKey) {
         $lastKey = $key
         $body = if ($target) { Get-FileView $target $rows } else { Get-Tree $root $rows }
-        Clear-Host
-        Write-Output $head
-        Write-Output $sub
-        Write-Output (C ([string]([char]0x2500) * [Math]::Max(10, $size.Width - 1)) 238)
-        $body | ForEach-Object { Write-Output $_ }
+        $rendered = ($body -join "`n")
+        # content comparison is what actually prevents the repaint; the key above
+        # only decides how often we are willing to look
+        if ($rendered -ne $lastBody -or $head -ne $lastHead) {
+            $lastBody = $rendered
+            $lastHead = $head
+            Clear-Host
+            Write-Output $head
+            Write-Output $sub
+            Write-Output (C ([string]([char]0x2500) * [Math]::Max(10, $size.Width - 1)) 238)
+            $body | ForEach-Object { Write-Output $_ }
+        }
     }
     Start-Sleep -Milliseconds $IntervalMs
 }

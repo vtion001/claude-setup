@@ -13,6 +13,11 @@
 .PARAMETER SkipTerminal
     Do not touch Windows Terminal settings.
 
+.PARAMETER WtConfigPath
+    Override the Windows Terminal settings.json location. Exists so the merge can
+    be exercised against a synthetic config - the fresh-install path is otherwise
+    unreachable on a machine that already has the bindings.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\install.ps1 -DryRun
     powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -20,7 +25,8 @@
 [CmdletBinding()]
 param(
     [switch]$DryRun,
-    [switch]$SkipTerminal
+    [switch]$SkipTerminal,
+    [string]$WtConfigPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -180,7 +186,7 @@ if (-not $SkipTerminal) {
     }
 
     $wtDir = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState'
-    $wtCfg = Join-Path $wtDir 'settings.json'
+    $wtCfg = if ($WtConfigPath) { $WtConfigPath } else { Join-Path $wtDir 'settings.json' }
     $appSrc = Join-Path $Root 'terminal\windows-terminal-appearance.json'
 
     if ((Test-Path $wtCfg) -and (Test-Path $appSrc)) {
