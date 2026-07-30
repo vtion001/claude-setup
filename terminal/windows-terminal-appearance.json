@@ -1,0 +1,14 @@
+{
+  "_note": "Appearance-only extract. Merge into Windows Terminal settings.json; install.ps1 does this.",
+  "profiles": {
+    "defaults": {
+      "backgroundImage": "C:/Users/VJ_Rodriguguez/.claude/v-claude-bg-terminal.png",
+      "backgroundImageOpacity": 0.35,
+      "backgroundImageStretchMode": "uniform",
+      "opacity": 100,
+      "useAcrylic": false
+    },
+    "list": []
+  },
+  "schemes": []
+}

@@ -1,0 +1,10 @@
+{
+  "name": "claude-global-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Global tooling for Claude Code (Playwright for QA audits, etc.)",
+  "dependencies": {
+    "@playwright/test": "1.59.1",
+    "playwright": "1.59.1"
+  }
+}

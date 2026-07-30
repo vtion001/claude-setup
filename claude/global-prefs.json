@@ -1,0 +1,12 @@
+{
+  "autoUpdates": false,
+  "showSpinnerTree": false,
+  "claudeInChromeDefaultEnabled": true,
+  "hasCompletedOnboarding": true,
+  "hasSeenTasksHint": true,
+  "hasUsedBackslashReturn": true,
+  "effortCalloutV2Dismissed": true,
+  "remoteDialogSeen": true,
+  "installMethod": "global",
+  "unpinOpus47LaunchEffort": true
+}

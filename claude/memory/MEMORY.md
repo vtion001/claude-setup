@@ -1,0 +1,1 @@
+- [Telegram Bot for Reports](reference_telegram_bot.md) — Bot token + chat ID for sending screenshots/reports to Vincent via Telegram

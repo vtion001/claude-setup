@@ -1,0 +1,11 @@
+{
+  "name": "demo-sample-pipeline",
+  "private": true,
+  "type": "module",
+  "//": "Two traps, both hit during this build: (1) `npm i --no-save <pkg>` in a directory with no manifest PRUNES existing extraneous packages — it silently removed playwright. (2) playwright must be PINNED EXACTLY to the Docker image tag; a caret range resolved to 1.62.1 against the v1.59.1 image and the browsers were missing.",
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "playwright": "1.59.1"
+  }
+}

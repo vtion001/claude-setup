@@ -1,0 +1,42 @@
+# Never commit real secrets — only .env.example belongs in git
+.env
+*.env
+!.env.example
+
+# Credentials / auth (must never be exported)
+.credentials.json
+*credentials*.json
+*.pem
+*.key
+
+# Conversation transcripts, prompt history, runtime state
+projects/
+sessions/
+session-env/
+shell-snapshots/
+history.jsonl
+todos/
+debug/
+telemetry/
+file-history/
+statusline.last.json
+prompt-boost.last.txt
+daemon.lock
+daemon.status.json
+*.log
+
+# Regenerable caches and vendored bulk
+plugins/
+downloads/
+node_modules/
+cache/
+image-cache/
+paste-cache/
+burp-mcp/
+__pycache__/
+*.pyc
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
