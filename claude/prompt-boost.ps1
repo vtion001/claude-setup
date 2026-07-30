@@ -59,15 +59,26 @@ function Log {
 # so walking the parent-process chain until a pid has a session file identifies
 # the exact conversation. That precision matters: several sessions routinely run
 # in the same cwd, and "newest transcript in this directory" picks the wrong one.
-# Measured against real turns before setting these: assistant replies in this
-# transcript run 3.5k+ chars, so the original 800/320 caps elided ~78% of the
-# newest turn and threw away exactly the lists that references point at ("the
-# second one", "the stale ones"). The total cap was never the binding
-# constraint - it sat at 2960/4500 while per-turn caps did the damage.
-$CtxMaxTurns  = 8       # user/assistant turns handed to the rewriter
-$CtxRecentCap = 2500    # chars kept for the 2 newest turns - references point here
-$CtxOlderCap  = 700     # chars kept for the rest
-$CtxTotalCap  = 12000   # hard ceiling on the block; oldest turns dropped first
+# Caps measured against real transcripts, not guessed. Across three live
+# sessions: assistant turns run 4.0k-7.9k chars, user turns 37-450, and eight
+# real turns total ~25k. So the two roles need different budgets - a single
+# number either starves the replies or wastes nothing on the prompts. What the
+# user actually typed is the highest-signal text per char and is essentially
+# free, so it is never trimmed in practice; the replies are the bulk, and older
+# ones get the tighter budget.
+#
+# Truncation keeps head AND tail (see Get-Trimmed), so an enumerated list at the
+# end of a long reply - the thing "the second one" points at - survives.
+#
+# The per-turn caps are set above the observed maxima on purpose: at these
+# values a typical window passes through uncut and the total cap is what
+# actually governs, so trimming stops being the reason a reference fails to
+# resolve. Worst case is ~45k chars (~11k tokens) of prefill per press.
+$CtxMaxTurns  = 12      # user/assistant turns handed to the rewriter
+$CtxUserCap   = 3000    # chars kept for a user turn - they run far under this
+$CtxRecentCap = 8000    # chars kept for the 2 newest turns - references point here
+$CtxOlderCap  = 6000    # chars kept for older replies
+$CtxTotalCap  = 45000   # hard ceiling on the block; oldest turns dropped first
 
 function Get-SessionInfo {
     $dir = Join-Path $HOME '.claude\sessions'
@@ -138,7 +149,14 @@ function Get-Trimmed {
 
 function Get-RecentTurns {
     param([string]$path)
-    $bytes = 1MB
+    # How deep this reads is a second, easily-missed cap on how far back a
+    # reference can resolve: measured across the six heaviest transcripts here, a
+    # 1MB tail reached only 5-6 turns in a tool-heavy session, 4MB reached 10-13,
+    # 8MB reached 12-13 everywhere. It is nearly free because the scan below
+    # walks backwards and stops at $CtxMaxTurns - on a 28MB transcript only ~164
+    # lines are ever touched, so the cost is the read and split alone (~90-330ms,
+    # dominated by whether the file is in the OS cache, not by the size).
+    $bytes = 8MB
     $len = 0
     $fs = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
     try {
@@ -202,11 +220,17 @@ function Get-ContextBlock {
 
     $n = $turns.Count
     $rendered = @()
+    $elided = 0
     for ($i = 0; $i -lt $n; $i++) {
-        # the newest turns get the bigger budget: "the second one" nearly always
-        # points at something in the last thing that was said
-        $cap = if ($i -ge $n - 2) { $CtxRecentCap } else { $CtxOlderCap }
-        $rendered += ('{0}: {1}' -f $turns[$i].role, (Get-Trimmed $turns[$i].text $cap))
+        # what the user typed is short and dense, so it is never worth trimming;
+        # replies are the bulk, and the newest get the bigger budget because
+        # "the second one" usually points at the last thing that was said
+        $cap = if ($turns[$i].role -eq 'user') { $CtxUserCap }
+               elseif ($i -ge $n - 2)          { $CtxRecentCap }
+               else                            { $CtxOlderCap }
+        $t = Get-Trimmed $turns[$i].text $cap
+        if ($t.Length -lt (($turns[$i].text -replace '\s+', ' ').Trim().Length)) { $elided++ }
+        $rendered += ('{0}: {1}' -f $turns[$i].role, $t)
     }
     while ($rendered.Count -gt 1 -and (($rendered -join "`n").Length -gt $CtxTotalCap)) {
         $rendered = $rendered[1..($rendered.Count - 1)]
@@ -214,6 +238,7 @@ function Get-ContextBlock {
     return [pscustomobject]@{
         Text    = ($rendered -join "`n")
         Turns   = $rendered.Count
+        Elided  = $elided   # turns that hit their cap - "why did that not resolve?"
         Session = $s.sessionId
     }
 }
@@ -222,7 +247,7 @@ if ($Probe) {
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $c = Get-ContextBlock
     if (-not $c) { Line 'no conversation context resolved' 203; exit 1 }
-    Line "session $($c.Session)  |  $($c.Turns) turns  |  $($c.Text.Length) chars  |  $('{0:N0}ms' -f $sw.Elapsed.TotalMilliseconds)" 45
+    Line "session $($c.Session)  |  $($c.Turns) turns  |  $($c.Elided) truncated  |  $($c.Text.Length) chars  |  $('{0:N0}ms' -f $sw.Elapsed.TotalMilliseconds)" 45
     Line ''
     Line $c.Text 250
     exit 0

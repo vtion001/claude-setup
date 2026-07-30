@@ -53,6 +53,46 @@ declines otherwise — that is not a bug.
 Other built-ins worth knowing: `/tui fullscreen` (renderer), `/focus`
 (minimal view, needs fullscreen renderer), `ctrl+o` transcript, `ctrl+t` todos.
 
+## Panes and the sidebar
+
+Claude Code has no split panes, no file explorer and no arbitrary-file viewer —
+its only panel is hardcoded to git diffs. These live in Windows Terminal instead,
+which is the same shape as Claude Code's own answer on macOS (it drives tmux and
+iTerm2 panes for teammate sessions).
+
+`alt+shift+*` throughout, because Claude Code itself owns plain `alt+p/o/t/w/v/j`
+and `alt+up`/`alt+down`.
+
+| Keys | Action |
+|---|---|
+| `alt+shift+s` | open the **sidebar** pane on the right (32%) |
+| `alt+shift+e` / `alt+shift+o` | split right / split down |
+| `alt+shift+←↑↓→` | move focus between panes |
+| `alt+shift+,` / `alt+shift+.` | resize pane |
+| `alt+shift+z` | zoom the focused pane full-screen |
+| `alt+shift+w` | close pane |
+| `alt+shift+d` | duplicate pane (pre-existing) |
+
+**The sidebar** (`sidebar.ps1`) has two modes:
+
+- **no target** — file tree of the repo, via `git ls-files`, so `.gitignore` is
+  respected and `node_modules` never appears
+- **a target** — that file with line numbers, re-rendering when it changes
+
+Point it at a file:
+
+```bash
+echo C:/path/to/file.php > ~/.claude/sidebar.target   # show a file
+: > ~/.claude/sidebar.target                          # back to the tree
+```
+
+Ask Claude to "show X in the sidebar" and it writes that file for you. The root
+auto-follows whichever project the newest live Claude Code session is in, so it
+tracks you across projects; override with `-Root`.
+
+It repaints only when the content key changes, so text stays selectable. To edit,
+focus the pane and run `vim`/`nano` there — there is still no in-app editor.
+
 ## Rebuilding on a new machine
 
 **Use the existing export first:** `github.com/vtion001/claude-setup` (private)

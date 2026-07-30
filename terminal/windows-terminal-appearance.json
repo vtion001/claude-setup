@@ -1,8 +1,10 @@
 {
-  "_note": "Appearance-only extract. Merge into Windows Terminal settings.json; install.ps1 does this.",
+  "_note": "Appearance + pane bindings. Merge into Windows Terminal settings.json; install.ps1 does this. backgroundImage and the sidebar commandline are rewritten to the target machine's paths.",
   "profiles": {
     "defaults": {
+      "background": "#000000",
       "backgroundImage": "C:/Users/VJ_Rodriguguez/.claude/v-claude-bg-terminal.png",
+      "backgroundImageAlignment": "center",
       "backgroundImageOpacity": 0.35,
       "backgroundImageStretchMode": "uniform",
       "opacity": 100,
@@ -10,5 +12,63 @@
     },
     "list": []
   },
+  "actions": [
+    {
+      "command": {
+        "action": "splitPane",
+        "commandline": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/sidebar.ps1",
+        "size": 0.32,
+        "split": "right"
+      },
+      "id": "User.splitPane.D184546D",
+      "name": "Claude sidebar (file tree / file viewer)"
+    }
+  ],
+  "keybindings": [
+    {
+      "id": "Terminal.ResizePaneLeft",
+      "keys": "alt+shift+comma"
+    },
+    {
+      "id": "User.splitPane.D184546D",
+      "keys": "alt+shift+s"
+    },
+    {
+      "id": "Terminal.DuplicatePaneRight",
+      "keys": "alt+shift+e"
+    },
+    {
+      "id": "Terminal.MoveFocusDown",
+      "keys": "alt+shift+down"
+    },
+    {
+      "id": "Terminal.DuplicatePaneDown",
+      "keys": "alt+shift+o"
+    },
+    {
+      "id": "Terminal.MoveFocusLeft",
+      "keys": "alt+shift+left"
+    },
+    {
+      "id": "Terminal.MoveFocusRight",
+      "keys": "alt+shift+right"
+    },
+    {
+      "id": "Terminal.MoveFocusUp",
+      "keys": "alt+shift+up"
+    },
+    {
+      "id": "Terminal.ResizePaneRight",
+      "keys": "alt+shift+period"
+    },
+    {
+      "id": "Terminal.TogglePaneZoom",
+      "keys": "alt+shift+z"
+    },
+    {
+      "id": "Terminal.ClosePane",
+      "keys": "alt+shift+w"
+    }
+  ],
   "schemes": []
 }

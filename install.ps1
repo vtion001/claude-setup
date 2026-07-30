@@ -201,6 +201,30 @@ if (-not $SkipTerminal) {
             $wt.profiles.defaults | Add-Member -NotePropertyName $p.Name -NotePropertyValue $val -Force
             Say "$($p.Name) = $val"
         }
+        # Pane bindings (sidebar, split, focus, zoom). Windows Terminal keeps the
+        # command in `actions` and the key in `keybindings`, joined by id - so
+        # both arrays have to be merged or the sidebar has no shortcut.
+        $sidebarDst = (Join-Path $ClaudeDir 'sidebar.ps1') -replace '\\','/'
+        if ($app.actions) {
+            if (-not $wt.actions) { $wt | Add-Member actions @() -Force }
+            $have = @($wt.actions | ForEach-Object { $_.id })
+            foreach ($a in $app.actions) {
+                # retarget the sidebar script at this machine's copy
+                if ($a.command.commandline -and $a.command.commandline -match 'sidebar\.ps1') {
+                    $a.command.commandline = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sidebarDst"
+                }
+                if ($have -notcontains $a.id) { $wt.actions = @($wt.actions) + $a; Say "action $($a.id)" }
+            }
+        }
+        if ($app.keybindings) {
+            if (-not $wt.keybindings) { $wt | Add-Member keybindings @() -Force }
+            foreach ($k in $app.keybindings) {
+                # upsert by keystroke so re-running the installer is idempotent
+                $wt.keybindings = @($wt.keybindings | Where-Object { $_.keys -ne $k.keys }) + $k
+                Say "$($k.keys) -> $($k.id)"
+            }
+        }
+
         if (-not $DryRun) { Write-Utf8NoBom -Path $wtCfg -Text ($wt | ConvertTo-Json -Depth 100) }
         Ok "Windows Terminal updated (restart it to see the background)"
     } else {
