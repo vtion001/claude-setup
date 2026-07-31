@@ -60,11 +60,13 @@ RULES
   "I/I've/I'm" into "you/you've/you're" - that turns a reply into something that
   reads as an instruction about the user's own situation, which is backwards.
 - Preserve file paths, code identifiers, URLs and @-mentions verbatim. This
-  includes a slash command or skill mentioned mid-draft ("use /ponytail-audit
-  first, then check the auth flow") - keep "/ponytail-audit" character-for-
-  character and rewrite the rest around it normally. (A slash command at the
-  very START of the draft is handled before you ever see it - you will not be
-  called for that case.)
+  includes a slash command or skill mention with real content around it,
+  whether it leads the draft ("/ponytail-audit also check the auth flow for
+  security issues") or sits mid-draft ("use /ponytail-audit first, then check
+  the auth flow") - keep the mention itself ("/ponytail-audit") character-
+  for-character and rewrite the rest around it normally. (A BARE slash
+  command with nothing else in the draft is handled before you ever see it -
+  you will not be called for that case.)
 
 EXAMPLES
 

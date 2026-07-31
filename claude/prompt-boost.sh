@@ -92,24 +92,22 @@ fi
 # Things that must never be rewritten, checked anywhere in the buffer:
 #  1. Attachment placeholders — Claude Code substitutes real content for these
 #     on submit; a rewrite that reworded/dropped one would silently detach it.
-#  2. A LEADING slash command — Claude Code only parses "/word ..." as an
-#     actual command+args invocation when it's the first token of the whole
-#     buffer, so rewriting any part of it (including the "args") risks
-#     breaking how that command parses its own arguments.
+#  2. A BARE slash command — the entire draft is nothing but "/word", nothing
+#     else to rewrite anyway.
 #  3. '#' memory writes — literal control input.
 #
-# A slash command merely MENTIONED mid-message ("use /ponytail-audit then fix
-# X too") is NOT a leading token, so Claude Code won't parse the buffer as an
-# invocation at all — it's safe to rewrite the surrounding prose. That case is
-# handled below by asking the rewriter to preserve the mention verbatim
-# instead of skipping the whole draft (see prompt-boost.system.md).
+# A slash/skill mention WITH real content around it — leading ("/ponytail-
+# audit also check the auth flow") or mid-message ("use /ponytail-audit then
+# fix X too") — is NOT skipped: there's real prose worth rewriting, so it goes
+# to the rewriter, which preserves the mention verbatim and rewrites the rest
+# (see prompt-boost.system.md).
 attach_re='\[(Pasted text #[0-9]+( \+[0-9]+ lines)?|Image #[0-9]+|Audio #[0-9]+|Image|Image source:[^]]*|Image:[^]]*|\.\.\.Truncated text #[0-9]+[^]]*)\]'
-leading_slash_re='^/[a-zA-Z][a-zA-Z0-9_-]*([[:space:]]|$)'
+bare_slash_re='^/[a-zA-Z][a-zA-Z0-9_-]*[[:space:]]*$'
 
 skip=""
 if printf '%s' "$trimmed" | grep -qE "$attach_re"; then
   skip="attachment"
-elif printf '%s' "$trimmed" | grep -qE "$leading_slash_re"; then
+elif printf '%s' "$trimmed" | grep -qE "$bare_slash_re"; then
   skip="slash command"
 elif [ "${trimmed:0:1}" = "#" ]; then
   skip="memory write"
@@ -206,6 +204,8 @@ bad_patterns=(
   '(need|needs|require|requires|without) (more |additional |further )?(clarification|context|information about)'
   "I.ll rewrite|rewrite your (request|prompt)|your request as a"
   "^[[:space:]]*(Sure|Certainly|Here.s the|Here is the)"
+  "(preserve|keep)[^.]*(mention|command|skill)[^.]*verbatim"
+  "rewrite (the |this )?(surrounding|rest of the)( instruction| prose| context)?"
 )
 for pat in "${bad_patterns[@]}"; do
   if printf '%s' "$clean" | grep -qiE "$pat"; then
