@@ -21,6 +21,7 @@ telemetry/
 file-history/
 statusline.last.json
 prompt-boost.last.txt
+sidebar.target
 daemon.lock
 daemon.status.json
 *.log

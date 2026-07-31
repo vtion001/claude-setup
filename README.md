@@ -40,10 +40,12 @@ claude/                       -> installs to ~/.claude
   CLAUDE.md                   global instructions (secrets redacted)
   skills/                     69 skills, symlinks dereferenced
   commands/                   code-audit, goal
-  hooks/                      sonar-secrets pre-tool + prompt scanners
+  hooks/                      sonar-secrets pre-tool + prompt scanners (.ps1 + .sh)
+                               stop-respect-active.sh (macOS/Linux Stop-hook safety net)
   memory/                     persistent memory store (secrets redacted)
-  statusline.ps1              3-row custom statusline
-  prompt-boost.ps1/.md/.json  ctrl+g prompt rewriter
+  statusline.ps1 / .sh        3-row custom statusline (Windows / macOS+Linux)
+  prompt-boost.ps1/.sh/.md/.json/-context.py   ctrl+g prompt rewriter
+  sidebar.ps1 / .py+-split.sh companion pane: file tree / live file viewer
   local-qwen3.ps1/.sh         local Qwen3 gateway launchers
   package.json
 
@@ -57,6 +59,51 @@ docs/
 install.ps1      importer (supports -DryRun, -SkipTerminal)
 .env.example     secret template
 ```
+
+---
+
+## macOS / Linux port
+
+The Windows-only pieces (statusline, prompt-boost, the sidebar companion pane,
+sonar-secrets hooks) have native macOS/Linux equivalents alongside the
+originals — bash + one small Python helper, no new dependencies beyond
+`jq` and `python3`.
+
+`install.ps1` doesn't wire these up (it's Windows-only); on macOS/Linux, copy
+`claude/` to `~/.claude` as usual, then add this to `~/.claude/settings.json`
+yourself (merge into your existing keys, don't overwrite):
+
+```json
+{
+  "env": { "VISUAL": "bash /Users/YOU/.claude/prompt-boost.sh" },
+  "statusLine": { "type": "command", "command": "bash /Users/YOU/.claude/statusline.sh" },
+  "hooks": {
+    "PreToolUse": [{ "matcher": "Read", "hooks": [{ "type": "command",
+      "command": "bash /Users/YOU/.claude/hooks/sonar-secrets/build-scripts/pretool-secrets.sh", "timeout": 60 }] }],
+    "UserPromptSubmit": [{ "matcher": "*", "hooks": [{ "type": "command",
+      "command": "bash /Users/YOU/.claude/hooks/sonar-secrets/build-scripts/prompt-secrets.sh", "timeout": 60 }] }]
+  }
+}
+```
+
+Notes:
+- `prompt-boost.sh` triggers on Claude Code's built-in `ctrl+g` — no separate
+  keybinding needed. It reads recent conversation context via
+  `prompt-boost-context.py`, asks a `❓`-prefixed clarifying question instead
+  of guessing when a reference can't be resolved, and preserves your own
+  first-person voice when the draft is answering a question the assistant
+  just asked (instead of flipping it into a second-person instruction).
+- The sonar-secrets hooks no-op safely if the `sonar` CLI isn't installed —
+  same graceful-degrade behavior as the Windows originals.
+- `sidebar.py` is a standalone companion pane (file tree when idle, live
+  file viewer when pointed at a target via `~/.claude/sidebar.target`) — pair
+  it with `sidebar-split.sh` and a terminal profile/keybinding of your choice
+  to split it into a new pane (an iTerm2 example: create a profile with
+  Custom Command `python3 ~/.claude/sidebar.py`, then use AppleScript's
+  `split vertically with profile "<name>"` or a Key Mapping bound to
+  `KEY_ACTION_SPLIT_VERTICALLY_WITH_PROFILE`).
+- `statusline.sh` auto-detects CPU/MEM via native macOS calls and falls back
+  to ASCII (`@`, `PR`) instead of Nerd Font glyphs if none is installed.
 
 ---
 
