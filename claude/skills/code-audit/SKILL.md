@@ -1,11 +1,11 @@
 ---
 name: code-audit
-description: This skill should be used when the user asks to "run a code audit", "audit the codebase", "scan for bugs and create Linear issues", "do a code audit with screenshots", "audit and file issues", "QA the app", "run QA", "security audit with Linear tickets", "check UX", "accessibility audit", "performance audit", "refactor audit", "check file structure", "verify fixes", or wants to run a full code review pipeline that produces Linear issues with before/after Playwright screenshots.
+description: This skill should be used when the user asks to "run a code audit", "audit the codebase", "scan for bugs and create agshub work items", "do a code audit with screenshots", "audit and file issues", "QA the app", "run QA", "security audit with agshub tickets", "check UX", "accessibility audit", "performance audit", "refactor audit", "check file structure", "verify fixes", or wants to run a full code review pipeline that produces agshub work items with before/after Playwright screenshots.
 ---
 
-# Code Audit → BEFORE/AFTER Screenshots → Linear Issues
+# Code Audit → BEFORE/AFTER Screenshots → agshub Work Items
 
-A full-pipeline code audit across 8 quality dimensions — security, architecture, code quality, accessibility, performance, component quality, UX design, and file structure/modularization — with BEFORE/AFTER Playwright screenshots (desktop + mobile) and Linear issue tracking in Jorge Salazar's exact format.
+A full-pipeline code audit across 8 quality dimensions — security, architecture, code quality, accessibility, performance, component quality, UX design, and file structure/modularization — with BEFORE/AFTER Playwright screenshots (desktop + mobile) and agshub work-item tracking in Jorge Salazar's template format.
 
 ## Scope Lock (CRITICAL)
 
@@ -20,12 +20,12 @@ A full-pipeline code audit across 8 quality dimensions — security, architectur
 ## Pipeline Overview
 
 ```
-Phase 1: Discovery      → Identify project root, scope lock, team, localhost URL, routes
+Phase 1: Discovery      → Identify project root, scope lock, agshub workspace/project, localhost URL, routes
 Phase 2: Audit           → 8 parallel passes (security, arch, code, a11y, perf, components, UX, structure)
 Phase 3: BEFORE shots    → Desktop + mobile captures of current broken state
-Phase 4: File issues     → Create Linear issues with BEFORE screenshots in Jorge's format
+Phase 4: File issues     → Create agshub work items with BEFORE screenshots in Jorge's format
 Phase 5: Comments        → Add Lighthouse scores, a11y trees, perf traces, code snippets
-Phase 6: Fix & AFTER     → After implementing fixes, capture AFTER screenshots, update Linear
+Phase 6: Fix & AFTER     → After implementing fixes, capture AFTER screenshots, update agshub
 Phase 7: Summary         → Audit scorecard + before/after comparison + issues table
 ```
 
@@ -123,7 +123,7 @@ Capture every affected route in both viewports before any fix:
 - `./audit-screenshots/before/before-{slug}-mobile.png` — 375x812
 - `./audit-screenshots/before/before-{slug}-element-{component}.png` — targeted element
 
-These document the current broken state and get embedded in the Linear issue under `## Before (Pre-Fix)`.
+These document the current broken state and get referenced in the agshub work item under `Before (Pre-Fix)`.
 
 ### AFTER Screenshots (Phase 6 — post-fix)
 
@@ -140,31 +140,27 @@ After each fix is implemented and the dev server reflects the updated code:
    - UX issues → re-verify checklist items, capture corrected layout
    - Bugs → capture page showing correct behavior
 
-3. **Update the Linear issue** with a verification comment:
+3. **Add a verification comment** to the agshub work item (`POST .../work-items/{id}/comments`), plain text — reference screenshot file paths, agshub has no attachment-upload endpoint:
 
-```markdown
-### Implementation Complete: Post-Fix Verification
+```
+Implementation Complete: Post-Fix Verification
 
-**AFTER — Desktop:**
-![after-desktop](upload-url)
+AFTER — Desktop: ./audit-screenshots/after/after-{slug}-desktop.png
+AFTER — Mobile:  ./audit-screenshots/after/after-{slug}-mobile.png
 
-**AFTER — Mobile:**
-![after-mobile](upload-url)
+Before -> After Comparison:
+Lighthouse A11y   62/100 -> 98/100
+LCP               4.2s -> 1.8s
+Status            Broken -> Resolved
 
-**Before → After Comparison:**
-| Metric | Before | After |
-|--------|--------|-------|
-| Lighthouse A11y | 62/100 | 98/100 |
-| LCP | 4.2s | 1.8s |
-| Status | Broken | Resolved |
-
-**Changes Made:**
+Changes Made:
 - [Files modified with brief description]
 - [Link to commit/PR]
 ```
 
-4. **Attach AFTER screenshots** to the issue via `create_attachment` or `create_attachment_from_upload`
-5. **Update issue status** to `Done` or `In Review`
+4. **Update the work item's state** (`PATCH .../work-items/{id}` `{state_id}`) to the project's
+   `completed`-group state — or leave it in the `started`-group state if a PR review is still
+   pending (agshub's 5 seeded states have no dedicated "in review" group).
 
 ### Side-by-Side Format for Comments
 
@@ -186,68 +182,51 @@ After each fix is implemented and the dev server reflects the updated code:
 - Both desktop and mobile viewports show correct behavior
 - No new console errors introduced by the fix
 
-## Linear Issue Template (Phase 4)
+## agshub Work Item Template (Phase 4)
 
-```markdown
-## Before (Pre-Fix)
-[BEFORE screenshots — desktop + mobile]
+Description is **plain text** in agshub (not markdown) — use blank lines/indentation for
+structure, not `#`/`*`:
 
-## Problem
+```
+Before (Pre-Fix)
+[BEFORE screenshot file paths — desktop + mobile]
+
+Problem
 [What is wrong — observable behavior]
 
-## Root Cause
+Root Cause
 [Why — code-level analysis with file paths]
 
-## Files Affected
+Files Affected
 [Bulleted file list]
 
-## Impact
+Impact
 [Business/user consequences, quantified where possible]
 
-## Fix
+Fix
 [Numbered actionable steps]
 
-## Verification
+Verification
 [Test scenarios to confirm]
 
-## After (Post-Fix)
-<!-- Added after implementation via Phase 6 -->
-[AFTER screenshots — desktop + mobile showing completed fix]
+After (Post-Fix)
+[Added after implementation via Phase 6 — AFTER screenshot file paths]
 ```
 
-## Screenshot Upload to Linear (MANDATORY)
+## Screenshots & agshub (No Attachment Upload)
 
-Screenshots MUST be uploaded and embedded inline in every Linear issue. This is a 3-step MCP flow — do NOT skip it.
-
-### Upload Sequence Per Issue
-
-```
-1. save_issue → create issue with placeholder, get issue ID (e.g., ALL-140)
-2. For EACH screenshot file:
-   a. Get exact file size:  wc -c < "./audit-screenshots/before/before-{slug}-desktop.png"
-   b. prepare_attachment_upload(issue, filename, "image/png", size) → returns assetUrl + uploadRequest
-   c. curl -X PUT --data-binary @"filepath" with ALL uploadRequest.headers → upload raw bytes (within 60s!)
-   d. create_attachment_from_upload(issue, assetUrl) → link file to issue
-3. save_issue → update description replacing placeholders with ![alt](assetUrl)
-```
-
-### Critical Rules
-- Use `--data-binary` in curl (NOT `-d`) — binary file, not form data
-- Send ALL headers from `uploadRequest.headers` exactly as returned — do not change casing or omit any
-- The signed URL expires in **60 seconds** — execute curl immediately after `prepare_attachment_upload`
-- `assetUrl` is the permanent CDN link — use it in `![alt](assetUrl)` markdown to render inline in Linear
-
-### AFTER Screenshots (Phase 6)
-Same upload sequence, but attach via `save_comment` instead of updating description:
-```
-save_comment(issue, "### Implementation Complete\n![After Desktop](assetUrl)\n![After Mobile](assetUrl)")
-```
+agshub has **no attachment-upload endpoint**. Screenshots stay on disk under
+`./audit-screenshots/` — reference their relative file paths as plain text in the description
+and in the Phase 6 verification comment. Do not attempt to embed `![alt](url)` markdown; agshub
+descriptions/comments render as plain text.
 
 ## Labels & Priority
 
-**Labels:** `Bug`, `Feature`, `Security`, `Accessibility`, `Performance`, `UX`, `Refactor`
+**Labels:** resolve or create these in the target agshub project (`GET`/`POST .../labels`):
+`Bug`, `Feature`, `Security`, `Accessibility`, `Performance`, `UX`, `Refactor`.
 
-**Priority:** Urgent (1) = security/data loss/WCAG-A. High (2) = broken flow/LCP>4s. Medium (3) = incorrect behavior/UX friction. Low (4) = cosmetic.
+**Priority:** agshub enum `urgent/high/medium/low/none`. `urgent` = security/data loss/WCAG-A.
+`high` = broken flow/LCP>4s. `medium` = incorrect behavior/UX friction. `low` = cosmetic.
 
 ## Additional Resources
 

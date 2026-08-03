@@ -1,14 +1,14 @@
-# Code Audit → Playwright Screenshots → Linear Issues
+# Code Audit → Playwright Screenshots → agshub Work Items
 
-Run a full-pipeline code audit: security, architecture, code review, accessibility, performance, component quality, and UX design — then capture BEFORE/AFTER Playwright screenshots (desktop + mobile) on localhost and file each finding as a Linear issue in Jorge Salazar's exact format. After fixes are implemented, re-capture AFTER screenshots as proof of completion and attach them to the same Linear issues.
+Run a full-pipeline code audit: security, architecture, code review, accessibility, performance, component quality, and UX design — then capture BEFORE/AFTER Playwright screenshots (desktop + mobile) on localhost and file each finding as an agshub work item in Jorge Salazar's template format. After fixes are implemented, re-capture AFTER screenshots as proof of completion and reference them on the same agshub work items.
 
 ```
-Phase 1: Discovery      → Identify project root, scope lock, team, localhost URL, routes
+Phase 1: Discovery      → Identify project root, scope lock, agshub workspace/project, localhost URL, routes
 Phase 2: Audit           → 8 parallel passes (security, arch, code, a11y, perf, components, UX, structure)
 Phase 3: BEFORE shots    → Desktop + mobile captures of current broken state
-Phase 4: File issues     → Create Linear issues with BEFORE screenshots in Jorge's format
+Phase 4: File issues     → Create agshub work items with BEFORE screenshots in Jorge's format
 Phase 5: Comments        → Add Lighthouse scores, a11y trees, perf traces, code snippets
-Phase 6: Fix & AFTER     → After implementing fixes, capture AFTER screenshots, update Linear issues
+Phase 6: Fix & AFTER     → After implementing fixes, capture AFTER screenshots, update agshub work items
 Phase 7: Summary         → Audit scorecard + before/after comparison + issues table
 ```
 
@@ -37,12 +37,19 @@ The project root is the **current working directory** where `/code-audit` was in
 - **NEVER** follow symlinks that point outside `PROJECT_ROOT`
 - **NEVER** scan parent directories, sibling repos, or global paths like `~/.claude/`
 
-### 2. Map to Linear Project
+### 2. Resolve agshub Workspace & Project
 
-Detect which Linear project this repo belongs to:
-   - Repos containing `bob` or `bob-ags` → Project: `BOB-AGS — Business Operations Bridge` (ID: `c7931e72-cb6b-46b3-b0d9-05c3c78e56b3`)
-   - Repos containing `email` or `ags-email` → Project: `AGS Email Tool` (ID: `56de9fb6-d1e8-4d3f-884e-974d625bd076`)
-   - Otherwise → ask the user which Linear project to file under
+Use `agshub-crud` (`mcp__agshub__*` tools if attached, else its REST helper) to resolve where
+findings will be filed — never guess or hardcode an ID:
+
+1. `GET /workspaces` — if the token has more than one workspace and the user hasn't named one, ask.
+2. `GET /workspaces/{ws}/projects` — match a project by name against the repo/app name (e.g. a
+   repo named `bob-ags` or `bobags-*` should match a project named along the lines of "BOB-AGS" /
+   "Business Operations Bridge"; an `ags-email`/`email`-named repo should match an email-tool
+   project).
+3. If 0 or more than 1 project matches, stop and show what was found — ask the user which
+   project to file under. Never act on a guessed match.
+4. Record the resolved `{ws}` slug and project UUID for Phases 4–6.
 3. **Determine localhost URL** — default to `http://localhost:3000`. Check `package.json` scripts or framework config for the actual dev server port. Confirm the dev server is running before proceeding.
 4. **Enumerate routes** — scan the project's routing layer **within PROJECT_ROOT only** to build a route list:
    - Next.js App Router: glob `app/**/page.{tsx,jsx,ts,js}` in `PROJECT_ROOT`
@@ -225,12 +232,12 @@ For each structural finding, provide:
 After all eight passes complete:
 
 1. **Deduplicate** — merge findings that reference the same file/component across different passes
-2. **Group** — cluster related findings into single issues when they affect the same page or component (following Jorge's multi-issue pattern, e.g., ALL-126 grouped 4 filter bugs into one issue)
-3. **Prioritize**:
-   - `Urgent` (1) = security vulnerability, data loss, or WCAG Level A violation
-   - `High` (2) = broken core flow, LCP > 4s, or critical a11y failure
-   - `Medium` (3) = incorrect behavior, UX friction, LCP 2.5–4s, WCAG AA violation
-   - `Low` (4) = cosmetic, minor UX improvements, code quality nitpicks
+2. **Group** — cluster related findings into single work items when they affect the same page or component (following Jorge's multi-issue pattern — e.g. grouping several filter bugs on the same page into one work item instead of filing each separately)
+3. **Prioritize** (agshub `priority` enum):
+   - `urgent` = security vulnerability, data loss, or WCAG Level A violation
+   - `high` = broken core flow, LCP > 4s, or critical a11y failure
+   - `medium` = incorrect behavior, UX friction, LCP 2.5–4s, WCAG AA violation
+   - `low` = cosmetic, minor UX improvements, code quality nitpicks
 4. **Classify** — label each finding:
    - `Bug` = defect, broken behavior
    - `Feature` = missing functionality
@@ -383,166 +390,68 @@ After the audit completes, clean up any auth changes:
 - Code-level issues (type errors, unused imports, dead code)
 - Configuration or environment issues
 
-## Phase 4: Create Linear Issues
+## Phase 4: Create agshub Work Items
 
-For each consolidated finding, create a Linear issue using the `save_issue` MCP tool.
+For each consolidated finding, create an agshub work item via `agshub-crud`
+(`mcp__agshub__*` tools if attached, else `POST /workspaces/{ws}/projects/{p}/work-items`).
 
-### Jorge's Exact Issue Template
+### Jorge's Exact Template
 
-Every issue MUST follow this structure:
+agshub descriptions render as **plain text** (not markdown) — every work item MUST follow this
+structure using blank lines/indentation, not `#`/`*`:
 
-```markdown
-## Before (Pre-Fix)
-[BEFORE Playwright screenshot(s) — desktop and mobile showing the current broken state]
+```
+Before (Pre-Fix)
+[BEFORE Playwright screenshot file paths — desktop and mobile showing the current broken state]
 
-## Problem
+Problem
 [Clear, concise description of the bug or issue observed. State what is wrong, not what should be done.]
 
-## Root Cause
+Root Cause
 [Technical analysis of WHY the issue exists. Reference specific code patterns, misconfigurations, or architectural decisions. Include file paths and line numbers when possible.]
 
-## Files Affected
+Files Affected
 [Bulleted list of specific files and components involved. Use relative paths from project root.]
 
-## Impact
+Impact
 [Business and user-facing consequences: trust, compliance, performance, UX, security. Quantify where possible — e.g., "Lighthouse a11y score: 62/100", "LCP: 4.2s on /dashboard".]
 
-## Fix
+Fix
 [Numbered, actionable steps to resolve. Each step should be specific enough for a developer to implement without ambiguity. Use sub-bullets for implementation details.]
 
-## Verification
+Verification
 [Concrete test scenarios to confirm the fix is correct. Each bullet = one verification step a QA engineer can execute.]
 
-## After (Post-Fix)
-<!-- AFTER screenshots will be added here once the fix is implemented -->
-[AFTER Playwright screenshot(s) — desktop and mobile showing the completed fix output. Added via Phase 7 after implementation.]
+After (Post-Fix)
+[Added via Phase 6 once the fix is implemented — AFTER screenshot file paths, desktop and mobile]
 ```
 
-### Required Fields for save_issue
+### Required Fields for the work-item POST
 
-| Field       | Value                                                                 |
-|-------------|-----------------------------------------------------------------------|
-| title       | Concise, descriptive — e.g., "Dashboard — missing loading states, broken mobile layout, and Lighthouse a11y score 62" |
-| description | Full issue body with screenshots + all 6 sections above               |
-| priority    | 1=Urgent, 2=High, 3=Medium, 4=Low                                    |
-| teamId      | `e50ae77f-4dee-4215-86a5-a0be5c163b7d` (Alliance Global Solutions)   |
-| projectId   | Auto-detected from repo (see Phase 1)                                 |
-| assigneeId  | `d4215d96-2261-4bbf-a3ca-5ef5e741bc86` (Vincent John Rodriguez)      |
-| labelIds    | Map finding type to label: `Bug`, `Feature`, `Security`, `Accessibility`, `Performance`, `UX`, or `Refactor` |
+Resolve every ID dynamically before writing — never hardcode a member/label/state ID
+(per `agshub-crud`'s confirm-before-you-fire rule):
 
-### Uploading & Embedding Screenshots in Issues (MANDATORY)
+| Field         | Value                                                                 |
+|---------------|-------------------------------------------------------------------------|
+| `title`       | Concise, descriptive — e.g., "Dashboard — missing loading states, broken mobile layout, and Lighthouse a11y score 62" |
+| `description` | Full body with screenshot paths + all 6 sections above (plain text)     |
+| `priority`    | agshub enum: `urgent`/`high`/`medium`/`low`                             |
+| `state_id`    | `GET .../projects/{p}/states`, use the default `backlog`- or `unstarted`-group state |
+| `assignee_ids`| Array — `GET /workspaces/{ws}/members`, match the current user's email; `[]` if none resolve |
+| `label_ids`   | Array — `GET .../projects/{p}/labels`, resolve or `POST` to create: `Bug`, `Feature`, `Security`, `Accessibility`, `Performance`, `UX`, or `Refactor` matching the finding type |
 
-Screenshots MUST be uploaded and embedded in every Linear issue that has a UI finding. This is a 3-step process using Linear MCP tools. Do NOT skip this — issues without screenshots are incomplete.
+### Screenshots (No Attachment Upload)
 
-#### Step 1: Create the issue FIRST (without screenshots)
-
-Create the Linear issue via `save_issue` with a placeholder in the description where screenshots will go:
-
-```markdown
-## Before (Pre-Fix)
-<!-- Screenshots uploading... -->
-
-## Problem
-...
-```
-
-Record the returned issue ID (e.g., `ALL-140`).
-
-#### Step 2: Upload each screenshot file to Linear
-
-For EACH screenshot file, execute this exact 3-step sequence:
-
-**Step 2a** — Get the file size in bytes:
-```bash
-wc -c < "./audit-screenshots/before/before-{slug}-desktop.png"
-```
-
-**Step 2b** — Call `prepare_attachment_upload` with the issue ID, filename, content type, and exact file size:
-```
-prepare_attachment_upload(
-  issue: "ALL-140",
-  filename: "before-dashboard-desktop.png",
-  contentType: "image/png",
-  size: <exact byte count from step 2a>,
-  title: "Before — Dashboard Desktop"
-)
-```
-
-This returns TWO values — save both:
-- `assetUrl` — the permanent Linear CDN URL for this file
-- `uploadRequest.url` + `uploadRequest.headers` — the signed Google Cloud upload URL and headers
-
-**Step 2c** — Upload the raw file bytes via curl with ALL signed headers exactly as returned:
-```bash
-curl -X PUT --data-binary @"./audit-screenshots/before/before-dashboard-desktop.png" \
-  -H "content-type: image/png" \
-  -H "x-goog-content-length-range: <value from headers>" \
-  -H "cache-control: public, max-age=31536000" \
-  -H 'Content-Disposition: attachment; filename="before-dashboard-desktop.png"' \
-  "<uploadRequest.url>"
-```
-
-CRITICAL: Use `--data-binary` (NOT `-d`). Send ALL headers from `uploadRequest.headers` exactly as returned — do not modify casing or omit any. The signed URL expires in 60 seconds, so execute immediately after step 2b.
-
-**Step 2d** — Finalize the attachment by calling `create_attachment_from_upload`:
-```
-create_attachment_from_upload(
-  issue: "ALL-140",
-  assetUrl: "<assetUrl from step 2b>",
-  title: "Before — Dashboard Desktop"
-)
-```
-
-Repeat steps 2a–2d for every screenshot (desktop, mobile, element captures).
-
-#### Step 3: Update the issue description with embedded images
-
-After all screenshots are uploaded, update the issue description via `save_issue` to replace the placeholders with the actual `assetUrl` values:
-
-```markdown
-## Before (Pre-Fix)
-**Desktop (1920×1080):**
-![Before — Dashboard Desktop](assetUrl-from-step-2b)
-
-**Mobile (375×812):**
-![Before — Dashboard Mobile](assetUrl-from-step-2b-mobile)
-
-## Problem
-...
-```
-
-Use the `assetUrl` returned by `prepare_attachment_upload` — this is the permanent CDN link that renders inline in Linear.
-
-#### Full Upload Sequence Per Issue
-
-```
-1. save_issue → create issue, get issue ID (e.g., ALL-140)
-2. For each screenshot:
-   a. wc -c to get file size
-   b. prepare_attachment_upload → get assetUrl + uploadRequest
-   c. curl PUT --data-binary with ALL signed headers → upload raw bytes
-   d. create_attachment_from_upload → link file to issue
-3. save_issue → update description with ![alt](assetUrl) markdown
-```
-
-#### For AFTER Screenshots (Phase 6)
-
-The same upload sequence applies when adding AFTER screenshots. Instead of updating the issue description, add them as a **comment** using `save_comment`:
-
-```
-1. For each AFTER screenshot:
-   a–d. Same upload steps as above
-2. save_comment on the issue with:
-   ### Implementation Complete: Post-Fix Verification
-   **AFTER — Desktop:**
-   ![After — Dashboard Desktop](assetUrl)
-   **AFTER — Mobile:**
-   ![After — Dashboard Mobile](assetUrl)
-```
+agshub has **no attachment-upload endpoint** — do not attempt to embed images. Screenshots stay
+on disk under `./audit-screenshots/`; reference their relative file paths as plain text at the
+top of the `description` (and again in the Phase 6 verification comment). This is a deliberate
+capability gap versus the old Linear flow, not an oversight — don't try to work around it with a
+different upload mechanism.
 
 ## Phase 5: Comments
 
-After issue creation, add comments using the `save_comment` MCP tool when:
+After work-item creation, add comments via `agshub-crud`
+(`POST .../work-items/{id}/comments` `{body}`) when:
 
 - **Lighthouse scores** — attach full Lighthouse audit summary (a11y score, performance score, best practices score) as a comment
 - **Accessibility tree excerpt** — paste relevant portions of the accessibility tree snapshot showing the violation
@@ -551,16 +460,16 @@ After issue creation, add comments using the `save_comment` MCP tool when:
 - **Related findings** — link to other issues from this audit that are connected
 - **Workarounds** — provide temporary mitigation steps for the team
 
-Comment format:
-```markdown
-### [Context Type]: [Brief Title]
+Comment format (plain text — no markdown rendering assumed):
+```
+[Context Type]: [Brief Title]
 
 [Content — code blocks, Lighthouse scores, accessibility tree excerpts, or explanation]
 ```
 
 ## Phase 6: Implementation & AFTER Screenshots (Post-Fix Verification)
 
-After each fix is implemented, capture **AFTER** screenshots to prove the change was completed successfully. These get attached to the same Linear issue as visual proof.
+After each fix is implemented, capture **AFTER** screenshots to prove the change was completed successfully. These get referenced on the same agshub work item as proof.
 
 ### When to Run Phase 6
 
@@ -590,64 +499,48 @@ After capturing screenshots, re-run the relevant audit checks to produce measura
 - **If the issue was UX:** Re-capture both viewports and verify the UX checklist items now pass
 - **If the issue was a bug:** Capture the page state showing the correct behavior
 
-### Uploading AFTER Screenshots & Updating the Linear Issue
+### Updating the agshub Work Item with AFTER Results
 
-For each fixed issue, upload AFTER screenshots using the SAME 3-step MCP flow from Phase 4:
+agshub has no attachment-upload endpoint — AFTER screenshots stay on disk under
+`./audit-screenshots/after/` and are referenced by path, not embedded.
 
-**Step 1** — For each AFTER screenshot file:
+**Step 1** — Add a verification comment (`POST .../work-items/{id}/comments` `{body}`), plain
+text, referencing the AFTER screenshot paths:
+
 ```
-a. wc -c < "./audit-screenshots/after/after-{slug}-desktop.png"   → get exact byte size
-b. prepare_attachment_upload(issue: "ALL-140", filename: "after-dashboard-desktop.png", contentType: "image/png", size: <bytes>)
-   → returns assetUrl + uploadRequest
-c. curl -X PUT --data-binary @"./audit-screenshots/after/after-dashboard-desktop.png" \
-     -H "content-type: image/png" \
-     -H "x-goog-content-length-range: <from headers>" \
-     -H "cache-control: public, max-age=31536000" \
-     -H 'Content-Disposition: attachment; filename="after-dashboard-desktop.png"' \
-     "<uploadRequest.url>"
-d. create_attachment_from_upload(issue: "ALL-140", assetUrl: "<assetUrl>", title: "After — Dashboard Desktop")
-```
+Implementation Complete: Post-Fix Verification
 
-**Step 2** — Add a verification comment with the uploaded AFTER `assetUrl` values via `save_comment`:
+AFTER — Desktop: ./audit-screenshots/after/after-{slug}-desktop.png
+AFTER — Mobile:  ./audit-screenshots/after/after-{slug}-mobile.png
 
-```markdown
-### Implementation Complete: Post-Fix Verification
+Before -> After Comparison:
+Lighthouse A11y   62/100 -> 98/100
+Lighthouse Perf   71/100 -> 94/100
+LCP               4.2s -> 1.8s
+Item Status       Broken -> Resolved
 
-**AFTER — Desktop:**
-![After — Dashboard Desktop](assetUrl-from-step-1b)
-
-**AFTER — Mobile:**
-![After — Dashboard Mobile](assetUrl-from-step-1b-mobile)
-
-**Before → After Comparison:**
-| Metric | Before | After |
-|--------|--------|-------|
-| Lighthouse A11y | 62/100 | 98/100 |
-| Lighthouse Perf | 71/100 | 94/100 |
-| LCP | 4.2s | 1.8s |
-| Issue Status | Broken | Resolved |
-
-**Changes Made:**
+Changes Made:
 - [List of files modified with brief description of each change]
 - [Link to commit or PR if available]
 ```
 
-**Step 3** — Update issue status via `save_issue` to `Done` or `In Review`
-**Step 4** — If a PR was created, add it as a comment linking to the PR URL
+**Step 2** — `PATCH .../work-items/{id}` `{state_id}` to the project's `completed`-group state
+(`GET .../states` to find it) — or leave it in the `started`-group state if a PR review is still
+pending (agshub's 5 seeded states have no dedicated "in review" group).
+**Step 3** — If a PR was created, add it as a follow-up comment linking to the PR URL.
 
 ### Side-by-Side Evidence Format
 
-When adding AFTER screenshots, always present them alongside the BEFORE state for clear comparison. Use this format in comments:
+When referencing AFTER screenshots, always present them alongside the BEFORE state for clear
+comparison. Use this format in comments (plain text, paths not embeds):
 
-```markdown
-### Before / After: [Page or Component Name]
+```
+Before / After: [Page or Component Name]
 
-| Desktop | Mobile |
-|---------|--------|
-| **BEFORE** | **BEFORE** |
-| ![before-desktop](url) | ![before-mobile](url) |
-| **AFTER** | **AFTER** |
-| ![after-desktop](url) | ![after-mobile](url) |
+Desktop — BEFORE: ./audit-screenshots/before/before-{slug}-desktop.png
+Desktop — AFTER:  ./audit-screenshots/after/after-{slug}-desktop.png
+Mobile  — BEFORE: ./audit-screenshots/before/before-{slug}-mobile.png
+Mobile  — AFTER:  ./audit-screenshots/after/after-{slug}-mobile.png
 ```
 
 ### What Counts as Verified
@@ -679,17 +572,17 @@ After the full pipeline completes, provide a summary to the user:
 ### Issues Filed
 
 ```markdown
-| # | Issue ID | Title | Priority | Label | Before | After | Status |
-|---|----------|-------|----------|-------|--------|-------|--------|
-| 1 | ALL-XXX  | ...   | High     | Bug   | 2 imgs | 2 imgs | Done |
-| 2 | ALL-XXX  | ...   | Medium   | A11y  | 3 imgs | pending | Todo |
+| # | Item ID | Title | Priority | Label | Before | After | Status |
+|---|---------|-------|----------|-------|--------|-------|--------|
+| 1 | <uuid>  | ...   | high     | Bug   | 2 imgs | 2 imgs | completed |
+| 2 | <uuid>  | ...   | medium   | A11y  | 3 imgs | pending | unstarted |
 ```
 
 Include:
-- Total issues created, grouped by label type
+- Total work items created, grouped by label type
 - Breakdown by priority
-- Link to each Linear issue URL
+- Link to each agshub work item (`https://agshub.onrender.com/{ws}/projects/{p}/work-items/{id}`, or the app's UI path)
 - Average Lighthouse scores (accessibility + performance) across all routes — BEFORE and AFTER where fixes were applied
-- Count of issues with AFTER verification completed vs. still pending
+- Count of items with AFTER verification completed vs. still pending
 - Any findings that could NOT be filed (with reason)
 - Top 3 highest-impact recommendations

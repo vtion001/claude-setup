@@ -7,9 +7,9 @@ description: >
   against a running app and its codebase. Augmented by MCP scanners and production signal:
   aikido/endor/sonatype (SAST + SCA + safe-version), Sentry (real prod errors), Render
   (prod Postgres EXPLAIN + metrics + logs), serena (symbol graph), chrome-devtools (perf
-  + a11y). De-duplicates overlapping findings, boosts prod-confirmed ones, files Linear
-  issues for the serious ones, and prints a single unified scorecard. Supports --quick,
-  --code-only, --no-linear, --pages, and --authorize flags. This skill should be used when the user
+  + a11y). De-duplicates overlapping findings, boosts prod-confirmed ones, files agshub
+  work items for the serious ones, and prints a single unified scorecard. Supports --quick,
+  --code-only, --no-agshub, --pages, and --authorize flags. This skill should be used when the user
   asks to "run all audits", "full audit", "audit everything", "complete audit sweep",
   "run the audit orchestrator", "do a full audit and file issues", "ui + ux + security +
   perf audit", or wants every audit dimension covered in one shot with a combined report.
@@ -18,10 +18,10 @@ description: >
 # Audit Orchestrator
 
 One entry point that runs every audit in parallel and merges their output into a single
-de-duplicated scorecard with Linear issues. It **invokes** the six audit skills, the
-`lighthouse-mcp` server, and a set of scanner/observability MCPs (aikido, endor, sonatype,
-Sentry, Render, serena, chrome-devtools) — it never re-implements them. Every MCP augmentation
-is optional and degrades gracefully when a server is unavailable.
+de-duplicated scorecard with agshub work items. It **invokes** the six audit skills, the
+`lighthouse-mcp` server, `agshub-crud`, and a set of scanner/observability MCPs (aikido, endor,
+sonatype, Sentry, Render, serena, chrome-devtools) — it never re-implements them. Every MCP
+augmentation is optional and degrades gracefully when a server is unavailable.
 
 ## Scope Lock (CRITICAL — inherited from code-audit)
 
@@ -37,14 +37,14 @@ is optional and degrades gracefully when a server is unavailable.
 
 ```
 Phase 1  Discovery        → lock PROJECT_ROOT, detect stack, resolve localhost URL + routes,
-                            resolve Linear team, auto-authenticate (once, shared by all passes)
+                            resolve agshub workspace/project, auto-authenticate (once, shared by all passes)
 Phase 2  Parallel fan-out → dispatch all 7 audit agents in ONE message (Agent tool)
 Phase 3  Aggregate        → collect structured findings, de-duplicate cross-audit overlaps
-Phase 4  File to Linear   → one ticket per Critical/High finding, domain-tagged, deduped
+Phase 4  File to agshub   → one work item per Critical/High finding, domain-tagged, deduped
 Phase 5  Unified report   → merged scorecard: per-domain scores + ranked findings + issue table
 ```
 
-`--code-only` drops Phase-1 auth and the runtime-only passes (2, 5, 7). `--no-linear` skips
+`--code-only` drops Phase-1 auth and the runtime-only passes (2, 5, 7). `--no-agshub` skips
 Phase 4. `--quick` tells each sub-audit to run automated checks only (skip Tier-2 AI judgment).
 
 ## Phase 1 — Discovery (run once, reuse for all agents)
@@ -57,7 +57,10 @@ do not duplicate them here:
 3. **Localhost URL + routes** — detect dev server URL (e.g. `http://localhost:5173`,
    Laravel `php artisan serve` on `:8000`) and enumerate routes. If no server is running and
    not `--code-only`, start it (`npm run dev`, `php artisan serve`) or instruct the user.
-4. **Linear team** — resolve via the same team-detection code-audit uses.
+4. **agshub workspace/project** — resolve via `agshub-crud`: `GET /workspaces`, then
+   `GET /workspaces/{ws}/projects`, matching by name against `PROJECT_ROOT`'s repo/app name.
+   If the workspace is ambiguous (>1 match, or the token spans multiple workspaces) or no
+   project matches, stop and ask — never guess (per `agshub-crud`'s confirm-before-you-fire rule).
 5. **Authentication** — run code-audit's 4-strategy auto-resolve (DB creds → seed creds →
    bypass → ask). Record any test users / bypasses created so Phase 5 can report cleanup.
 6. **Runtime handles (optional, skip if absent)** — resolve the **Sentry** org/project
@@ -82,7 +85,7 @@ invokes its named audit skill and returns findings — **not prose**.
 | 3 | security    | `security-audit`  | `aikido` (`aikido_full_scan`, `aikido_issues_list`) for SAST/secrets; **Sentry** `search_issues`/`analyze_issue_with_seer` to find security-relevant prod errors. Default `--passive`; active only if `--authorize` |
 | 4 | backend     | `backend-audit`   | **Render**: `query_render_postgres` to `EXPLAIN ANALYZE` suspected slow queries, `get_metrics` (CPU/mem/latency), `list_logs` (error rates); **Sentry** for backend exceptions |
 | 5 | qa          | `qa-audit`        | **Sentry** `search_issues` to correlate each route with real user-facing errors (a page Sentry shows erroring outranks a theoretical bug) |
-| 6 | code        | `code-audit`      | **serena** symbol graph (`find_symbol`, `find_referencing_symbols`) for accurate dead-code / circular-dep / god-file detection. **Audit phases ONLY** — tell it NOT to file Linear or write its own report; the orchestrator owns Phases 4 & 5 |
+| 6 | code        | `code-audit`      | **serena** symbol graph (`find_symbol`, `find_referencing_symbols`) for accurate dead-code / circular-dep / god-file detection. **Audit phases ONLY** — tell it NOT to file agshub work items or write its own report; the orchestrator owns Phases 4 & 5 |
 | 7 | performance | `lighthouse-mcp` tools | Lighthouse per route: LCP, CLS, TBT + perf/SEO/best-practices/a11y scores. Fallback to `chrome-devtools` `lighthouse_audit` + `performance_start_trace` if lighthouse-mcp tools aren't loaded |
 | 8 | supply-chain | `aikido` + `endor` + `sonatype` | `aikido_full_scan` + `endor` `check_dependency_for_vulnerabilities`/`security_review` for vulnerable & reachable deps; `sonatype` `getRecommendedComponentVersions` to attach a safe upgrade target to each finding |
 
@@ -110,7 +113,7 @@ Return a JSON object:
       "location": "path/to/file.ext:line  OR  /route",
       "evidence": "what was observed",
       "remediation": "specific fix",
-      "linear_candidate": true
+      "agshub_candidate": true
     }
   ]
 }
@@ -132,16 +135,25 @@ performance in **backend + code(Pass E) + performance**; component/CSS issues in
    route/error), bump it up one severity and tag `prod-confirmed` — observed beats theoretical.
 4. Group surviving findings by domain and by severity for the report.
 
-## Phase 4 — File to Linear (skip if `--no-linear`)
+## Phase 4 — File to agshub (skip if `--no-agshub`)
 
-For findings where `linear_candidate == true` **and** `severity ∈ {Critical, High}` (deduped):
+For findings where `agshub_candidate == true` **and** `severity ∈ {Critical, High}` (deduped),
+use `agshub-crud` (`mcp__agshub__*` tools if attached, else its REST helper):
 
-- Create one issue per finding via the resolved team, using code-audit's **Linear Issue
-  Template** and its **mandatory 3-step screenshot upload flow**
-  (`save_issue` → `prepare_attachment_upload` → `curl PUT` → `create_attachment_from_upload`).
-- Prefix the title with the domain label, e.g. `[security] Missing Content-Security-Policy`.
-- Add a `sources:` line in the body when multiple audits flagged the same root cause.
-- Do not open duplicate tickets for merged findings.
+- Resolve the target project's default open state (`GET .../states`, pick the `unstarted`- or
+  `backlog`-group state) and, if the project has them, domain labels matching
+  `ui`/`ux`/`security`/`backend`/`qa`/`code`/`performance`/`supply-chain` (`GET .../labels`).
+- `GET .../work-items` first and skip any finding whose title already matches an open item —
+  don't re-file the same finding on repeat runs.
+- `POST .../work-items` per surviving finding: `title` prefixed with the domain label (e.g.
+  `[security] Missing Content-Security-Policy`); `description` as **plain text** (agshub renders
+  it unmodified — use line breaks/indentation, not markdown headings) containing evidence,
+  location, and remediation, plus a `sources:` line when multiple audits flagged the same root
+  cause; `priority` = `urgent` for Critical / `high` for High; `label_ids` set to the matched
+  domain label when one exists.
+- agshub has no attachment-upload endpoint — if code-audit captured before/after screenshots,
+  reference their local file path in the description instead of embedding them.
+- Do not open duplicate work items for merged findings.
 
 ## Phase 5 — Unified scorecard
 
@@ -168,9 +180,9 @@ Target: <url>   Project: <root>   Mode: <full|code-only|quick>
 - **[Critical] …** — location — sources: [ui, code] — fix: …
 - **[High] …** — …
 
-## Linear Issues Filed
-| Issue | Domain | Severity | Title |
-|-------|--------|----------|-------|
+## agshub Work Items Filed
+| Item | Domain | Severity | Title |
+|------|--------|----------|-------|
 
 ## Notes
 - Failed/skipped passes (with reason)
@@ -185,6 +197,6 @@ Overall score = severity-weighted roll-up across domains (Critical findings domi
 |------|--------|
 | `--quick` | each sub-audit runs automated checks only (skips Tier-2 AI judgment) |
 | `--code-only` | static analysis only; drops auth + runtime passes (2, 5, 7) |
-| `--no-linear` | produce the report but file no Linear issues |
+| `--no-agshub` | produce the report but file no agshub work items |
 | `--pages <routes>` | restrict runtime passes to the given routes |
 | `--authorize` | allow active/intrusive security testing in pass 3 (default is passive) |
