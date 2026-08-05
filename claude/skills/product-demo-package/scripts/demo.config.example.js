@@ -26,6 +26,24 @@ export default {
     rhythmRange: [0.82, 1.3],
   },
 
+  /**
+   * Hook -> problem -> (scenes) -> proof -> CTA. Same rule as `targets[]`:
+   * never invent a claim for narrative effect. `4,984` / `4,975` are the real
+   * chat-QA attribution numbers from this session's tenancy work (a genuine
+   * fix, not marketing copy) — the dashboard scene and chat-qa scene both show
+   * consistent figures, so the hook isn't asserting something the footage
+   * doesn't back up. `{{...}}` marks the fragment styled as the isolated,
+   * Von-Restorff-treated span.
+   */
+  narrative: {
+    hook: '{{4,984 conversations.}} Every one had to be traced back to an operator by hand.',
+    proof: '{{4,975}} were recovered automatically.',
+    cta: {
+      line1: 'Ask for a walkthrough on your own data.',
+      line2: 'BOB-AGS · Tenant-isolated by design.',
+    },
+  },
+
   output: { genre: 'both', width: 1920, height: 1080, fps: 30, sizzleSec: 14 },
 
   // Reference-grade product films do not brand their own screen recording

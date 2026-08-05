@@ -18,6 +18,13 @@
 >
 > The single most important change: **never hand-write cursor coordinates.** See
 > "The cursor must be anchored to real elements" in `SKILL.md`.
+>
+> **Also add a Task between 2 and 5: the narrative intake.** Ask for a hook, a
+> proof stat, and a CTA (question group 5 in `SKILL.md`'s mandatory intake) and
+> write them into `demo.config.js`'s `narrative` block — same never-invent rule
+> as targets, applied to copy. Task 8's composition now includes a cold-open
+> Hook beat and a Proof/CTA beat bookending the scenes; see "Narrative &
+> engagement" in `SKILL.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

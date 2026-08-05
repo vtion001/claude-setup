@@ -34,6 +34,30 @@ const hexToRgb = (h) => {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
 
+/**
+ * Relative luminance of the preset's own surface colour — not a per-preset
+ * flag, because `brand-derived` resolves its surface from the live app at
+ * intake time and isn't known when a preset is authored. A dark theatrical
+ * vignette read as "cinematic" on `cinematic-dark`'s near-black surface; on
+ * `clean-light`'s white one the exact same overlay just muddied the edges,
+ * which is the opposite of "clean." Every full-frame vignette below checks
+ * this instead of assuming dark.
+ */
+const IS_LIGHT = (() => {
+  const [r, g, b] = hexToRgb(B.surface);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6;
+})();
+
+/** Full-bleed edge vignette — the cinematic-dark treatment only; a clean
+ * light stage stays flat so nothing muddies the white. */
+const vignette = (opacity, innerStopPct = 38, atY = 50) =>
+  IS_LIGHT ? null : (
+    <AbsoluteFill style={{
+      background: `radial-gradient(115% 85% at 50% ${atY}%, transparent ${innerStopPct}%, rgba(0,0,0,${opacity}) 100%)`,
+      pointerEvents: 'none',
+    }} />
+  );
+
 const rgbToHsl = ([r, g, b]) => {
   r /= 255; g /= 255; b /= 255;
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
@@ -72,6 +96,28 @@ const rhythmFor = (i) =>
 const easeStd = Easing.bezier(0.4, 0, 0.2, 1);
 const easeOut = Easing.bezier(0.16, 1, 0.3, 1);
 const easeEmph = Easing.bezier(0.34, 1.7, 0.64, 1);
+
+/**
+ * `{{...}}` marks the fragment to isolate — the Von Restorff effect (one item
+ * that visually differs from its neighbors is recalled far more often; a 500-
+ * person replication found a single number in a different color was recalled
+ * 30x more often than its plain neighbors). Splitting on the delimiter, not on
+ * word position, keeps the isolated span an authoring decision in
+ * demo.config.js rather than something guessed from the sentence structure.
+ *
+ * The isolated span itself is never invented by the render — see
+ * config.narrative in demo.config.js: every hook/proof number here must trace
+ * to something the app or a prior measurement can verify, the same discipline
+ * `targets[]` applies to cursor coordinates.
+ */
+const renderIsolated = (str, accent, muted, big) => {
+  const parts = String(str).split(/\{\{(.+?)\}\}/g);
+  return parts.map((part, i) => (
+    i % 2 === 1
+      ? <span key={i} style={{ color: accent, fontWeight: 800, fontSize: big }}>{part}</span>
+      : <span key={i} style={{ color: muted }}>{part}</span>
+  ));
+};
 
 /* ---------------- atmosphere ---------------- */
 
@@ -200,6 +246,13 @@ const FocusRing = ({ scene, t, index }) => {
         if (a <= 0.01) return null;
         const breathe = 1 + Math.sin(t * 7) * 0.012;
         const pad = 8;
+        // Same breathing/fade timing on both presets — only the paint changes.
+        // A neon bloom reads as premium against cinematic-dark's near-black
+        // surface; the identical blur on white just looks smudged, so clean-light
+        // gets a crisp ring and a much quieter shadow instead of a glow.
+        const boxShadow = IS_LIGHT
+          ? `0 2px 10px ${accentFor(index, 0.25)}`
+          : `0 0 26px ${accentFor(index, 0.5)}, inset 0 0 18px ${accentFor(index, 0.14)}`;
         return (
           <div key={i} style={{
             position: 'absolute',
@@ -208,8 +261,8 @@ const FocusRing = ({ scene, t, index }) => {
             transform: `translate(-50%,-50%) scale(${breathe})`,
             borderRadius: 12,
             border: `2px solid ${accentFor(index)}`,
-            background: accentFor(index, 0.1),
-            boxShadow: `0 0 26px ${accentFor(index, 0.5)}, inset 0 0 18px ${accentFor(index, 0.14)}`,
+            background: accentFor(index, IS_LIGHT ? 0.06 : 0.1),
+            boxShadow,
             opacity: a * 0.95,
           }} />
         );
@@ -315,10 +368,7 @@ const Stage = ({ scene, frame, dur, index }) => {
           </div>
         </div>
       </div>
-      <AbsoluteFill style={{
-        background: `radial-gradient(115% 85% at 50% 48%, transparent ${28 + 10 * lift}%, rgba(0,0,0,${0.9 - 0.18 * lift}) 100%)`,
-        pointerEvents: 'none',
-      }} />
+      {vignette(0.9 - 0.18 * lift, 28 + 10 * lift, 48)}
     </AbsoluteFill>
   );
 };
@@ -329,11 +379,16 @@ const SceneType = ({ text, sub, frame, dur, index }) => {
   const op = interpolate(frame, [14, 32], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const out = interpolate(frame, [dur - 16, dur - 2], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const bar = interpolate(frame, [18, 46], [0, 72], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: easeOut });
+  // A black glow under the caption reads as "lit from below" on a dark stage;
+  // on a light one it just smudges dark text with a dark halo, so it's a soft
+  // ambient shadow instead — barely-there, the way clean UI text usually sits
+  // on a light surface.
+  const textShadow = IS_LIGHT ? '0 2px 10px rgba(16,16,16,0.12)' : '0 6px 30px rgba(0,0,0,0.9)';
   return (
     <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 46, fontFamily: B.font }}>
       <div style={{ transform: `translateY(${y}px)`, opacity: op * out, filter: `blur(${blur}px)`, textAlign: 'center' }}>
         <div style={{ width: bar, height: 3, background: accentFor(index), borderRadius: 2, margin: '0 auto 14px', boxShadow: `0 0 16px ${accentFor(index)}` }} />
-        <div style={{ fontSize: 42, fontWeight: 700, color: B.text, textShadow: '0 6px 30px rgba(0,0,0,0.9)' }}>{text}</div>
+        <div style={{ fontSize: 42, fontWeight: 700, color: B.text, textShadow }}>{text}</div>
         <div style={{ fontSize: 21, fontWeight: 500, color: B.muted, marginTop: 8 }}>{sub}</div>
       </div>
     </AbsoluteFill>
@@ -376,10 +431,64 @@ const KineticWords = ({ words, dur }) => {
   );
 };
 
-const Title = ({ kicker, words, sub, dur, index = 0 }) => {
+/**
+ * Cold open. NO branding, no sidebar chrome, no sparkles — this is the
+ * agitate beat (StoryBrand: name the problem before introducing the guide),
+ * and a sober tone is what makes the payoff at `Proof` read as a release.
+ * `narrative.hook` is the only thing rendered; there is no fallback copy,
+ * because inventing a hook line would be exactly the defect the DOM-anchored
+ * cursor work exists to prevent, just moved from pixels to prose.
+ */
+const Hook = ({ dur }) => {
+  const frame = useCurrentFrame();
+  const op = interpolate(frame, [0, 10, dur - 10, dur], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const y = interpolate(frame, [0, 16], [16, 0], { extrapolateRight: 'clamp', easing: easeOut });
+  const n = config.narrative;
+  if (!n?.hook) return null;
+  return (
+    <AbsoluteFill style={{ background: B.surfaceAlt, alignItems: 'center', justifyContent: 'center', fontFamily: B.font }}>
+      <Ambience frame={frame} index={0} />
+      <div style={{ textAlign: 'center', zIndex: 2, opacity: op, transform: `translateY(${y}px)`, maxWidth: '74%' }}>
+        <div style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.28 }}>
+          {renderIsolated(n.hook, accentFor(0), B.text, 46)}
+        </div>
+      </div>
+      {vignette(0.82)}
+    </AbsoluteFill>
+  );
+};
+
+/**
+ * The payoff — same isolation styling and screen position as `Hook`, on
+ * purpose. Closing a Zeigarnik open loop depends on the viewer recognizing
+ * "this answers the thing from 15 seconds ago," not just seeing a nice
+ * number; a visual callback is what makes that recognition automatic.
+ */
+const Proof = ({ dur, index }) => {
+  const frame = useCurrentFrame();
+  const op = interpolate(frame, [0, 10, dur - 10, dur], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const scale = interpolate(frame, [0, 16], [0.94, 1], { extrapolateRight: 'clamp', easing: easeEmph });
+  const n = config.narrative;
+  if (!n?.proof) return null;
+  return (
+    <AbsoluteFill style={{ background: B.surfaceAlt, alignItems: 'center', justifyContent: 'center', fontFamily: B.font }}>
+      <Ambience frame={frame} index={index} />
+      <Sparkles frame={frame} seed="proof" index={index} count={M.particles ? 16 : 0} />
+      <div style={{ textAlign: 'center', zIndex: 2, opacity: op, transform: `scale(${scale})`, maxWidth: '74%' }}>
+        <div style={{ fontSize: 50, fontWeight: 700, lineHeight: 1.24 }}>
+          {renderIsolated(n.proof, accentFor(index), B.text, 50)}
+        </div>
+      </div>
+      {vignette(0.78)}
+    </AbsoluteFill>
+  );
+};
+
+const Title = ({ kicker, words, sub, cta, dur, index = 0 }) => {
   const frame = useCurrentFrame();
   const kick = interpolate(frame, [0, 18], [0, 1], { extrapolateRight: 'clamp' });
   const subOp = interpolate(frame, [26, 46], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const ctaOp = interpolate(frame, [36, 56], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const out = interpolate(frame, [dur - 14, dur], [1, 0], { extrapolateLeft: 'clamp' });
   return (
     <AbsoluteFill style={{ fontFamily: B.font, alignItems: 'center', justifyContent: 'center', opacity: out }}>
@@ -388,43 +497,87 @@ const Title = ({ kicker, words, sub, dur, index = 0 }) => {
       <div style={{ textAlign: 'center', zIndex: 2 }}>
         <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: 6, textTransform: 'uppercase', color: accentFor(index), marginBottom: 24, opacity: kick }}>{kicker}</div>
         <KineticWords words={words} dur={dur} />
-        <div style={{ fontSize: 25, fontWeight: 500, color: B.muted, marginTop: 26, opacity: subOp }}>{sub}</div>
+        {/* A CTA card ends on ONE concrete next step (see SKILL.md) — the
+            generic tagline would compete with it, so it's dropped rather than
+            stacked. Kept for the brand-reveal card, which has no CTA yet. */}
+        {!cta && <div style={{ fontSize: 25, fontWeight: 500, color: B.muted, marginTop: 26, opacity: subOp }}>{sub}</div>}
+        {cta && (
+          <div style={{ marginTop: 34, opacity: ctaOp }}>
+            <div style={{ fontSize: 30, fontWeight: 700, color: B.text }}>{cta.line1}</div>
+            {cta.line2 && <div style={{ fontSize: 17, fontWeight: 500, color: B.muted, marginTop: 10, letterSpacing: 1 }}>{cta.line2}</div>}
+          </div>
+        )}
       </div>
       {/* Watermark defaults to cards-only: no reference-grade product film
-          brands its own screen recording continuously. */}
-      {config.watermark?.mode !== 'none' && (
+          brands its own screen recording continuously. Suppressed on a CTA
+          card — cta.line2 already carries the brand mention, and a third
+          repetition in one frame is noise, not reinforcement. */}
+      {config.watermark?.mode !== 'none' && !cta && (
         <div style={{
           position: 'absolute', bottom: 40, fontSize: 14, letterSpacing: 3,
           textTransform: 'uppercase', color: B.muted, opacity: 0.6 * kick,
         }}>{config.watermark.text}</div>
       )}
-      <AbsoluteFill style={{ background: 'radial-gradient(115% 85% at 50% 50%, transparent 40%, rgba(0,0,0,0.78) 100%)', pointerEvents: 'none' }} />
+      {vignette(0.78, 40)}
     </AbsoluteFill>
   );
 };
 
 /* ---------------- timeline ---------------- */
 
+/**
+ * Hook -> brand -> scenes -> Proof -> CTA.
+ *
+ * Leading with the logo before the viewer has a reason to care is a documented
+ * retention anti-pattern (brand recognition isn't relevance). So the brand
+ * reveal moved AFTER the hook, and the hook itself carries no branding.
+ *
+ * HOOK_CUT is deliberately a much harder cut than the rest of the timeline's
+ * 0.45s dissolves — a pattern interrupt at the hook->brand transition, not a
+ * graceful one, because that snap is what resets a drifting viewer's attention.
+ *
+ * Hook and Proof collapse to zero duration when config.narrative is absent, so
+ * an existing demo.config.js without the narrative block renders exactly as
+ * before — this is additive, not a breaking change.
+ */
 export const layout = (fps) => {
-  const intro = Math.round(3.2 * fps);
-  const outro = Math.round(3.0 * fps);
+  const hasNarrative = !!config.narrative;
+  const HOOK = hasNarrative ? Math.round(2.6 * fps) : 0;
+  const HOOK_CUT = hasNarrative ? Math.round(0.12 * fps) : 0;
+  const PROOF = hasNarrative && config.narrative.proof ? Math.round(2.4 * fps) : 0;
+  const intro = Math.round(2.6 * fps);
+  const outro = Math.round(3.2 * fps);
   const OVERLAP = Math.round(0.45 * fps);
-  let cursor = intro - OVERLAP;
+
+  let cursor = HOOK - HOOK_CUT;
+  cursor += intro - OVERLAP;
+  const introFrom = HOOK - HOOK_CUT;
+
   const items = SCENES.map((s, i) => {
     const d = Math.round(s.sec * fps);
     const from = cursor;
     cursor += d - OVERLAP;
     return { s, d, from, i };
   });
-  return { intro, outro, items, total: cursor + outro };
+
+  const proofFrom = cursor;
+  if (PROOF) cursor += PROOF - OVERLAP;
+
+  return { HOOK, HOOK_CUT, intro, introFrom, PROOF, proofFrom, outro, items, total: cursor + outro };
 };
 
 export const Demo = () => {
   const { fps } = useVideoConfig();
-  const { intro, outro, items, total } = layout(fps);
+  const { HOOK, intro, introFrom, PROOF, proofFrom, outro, items, total } = layout(fps);
+  const n = config.narrative;
   return (
     <AbsoluteFill style={{ background: B.surface }}>
-      <Sequence durationInFrames={intro}>
+      {HOOK > 0 && (
+        <Sequence durationInFrames={HOOK}>
+          <Hook dur={HOOK} />
+        </Sequence>
+      )}
+      <Sequence from={introFrom} durationInFrames={intro}>
         <Title {...config.intro} dur={intro} index={0} />
       </Sequence>
       {items.map(({ s, d, from, i }) => (
@@ -432,8 +585,13 @@ export const Demo = () => {
           <Scene scene={s} dur={d} index={i} />
         </Sequence>
       ))}
+      {PROOF > 0 && (
+        <Sequence from={proofFrom} durationInFrames={PROOF}>
+          <Proof dur={PROOF} index={items.length} />
+        </Sequence>
+      )}
       <Sequence from={total - outro} durationInFrames={outro}>
-        <Title {...config.outro} dur={outro} index={items.length} />
+        <Title {...config.outro} cta={n?.cta} dur={outro} index={items.length + 1} />
       </Sequence>
     </AbsoluteFill>
   );
