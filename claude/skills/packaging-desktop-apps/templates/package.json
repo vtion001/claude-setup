@@ -1,0 +1,60 @@
+{
+  "name": "desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Thin Electron wrapper for {{PRODUCT_NAME}} — opens the hosted app in its own window. No bundled backend or frontend build; it's a client, same as a browser tab.",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build:win": "electron-builder --win --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "make-icon": "node scripts/make-icon.mjs <path-to-source.svg-or-png> build"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "sharp": "^0.33.0",
+    "to-ico": "^1.1.5",
+    "png2icons": "^2.0.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.0.0"
+  },
+  "build": {
+    "appId": "{{APP_ID}}",
+    "productName": "{{PRODUCT_NAME}}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*"
+    ],
+    "protocols": {
+      "name": "{{PRODUCT_NAME}} deep link",
+      "schemes": ["{{PROTOCOL}}"]
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "{{PRODUCT_NAME}}-Setup-${version}.${ext}"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "artifactName": "{{PRODUCT_NAME}}-Setup-${version}.${ext}"
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "{{DOWNLOADS_URL}}"
+    }
+  }
+}

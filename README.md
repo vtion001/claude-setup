@@ -38,7 +38,7 @@ claude/                       -> installs to ~/.claude
   settings.local.json         per-project permission allowlist
   global-prefs.json           portable subset of ~/.claude.json (10 keys)
   CLAUDE.md                   global instructions (secrets redacted)
-  skills/                     69 skills, symlinks dereferenced
+  skills/                     70 skills, symlinks dereferenced
   commands/                   code-audit, goal
   hooks/                      sonar-secrets pre-tool + prompt scanners (.ps1 + .sh)
                                stop-respect-active.sh (macOS/Linux Stop-hook safety net)
