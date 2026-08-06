@@ -63,9 +63,10 @@ Where `max_score = 5` for every pass.
 | **1x** | Mobile Responsiveness | Cross-device experience quality |
 | **1x** | Trust & Credibility | Conversion and user confidence signals |
 | **1x** | Performance UX | Perceived speed and loading experience |
+| **1x** | Gamification & Reward Psychology | Motivation-mechanic quality for apps with points/badges/levels/leaderboards — **N/A and excluded from the total when the app has no gamification elements** (see Pass 14), not counted as a 1 |
 
-### Total Weight: 24x (across 13 passes)
-### Maximum Raw Score: 120 (24 * 5)
+### Total Weight: 24x (across 13 passes), or 25x when Pass 14 applies (14 passes)
+### Maximum Raw Score: 120 (24 * 5), or 125 (25 * 5) when Pass 14 applies
 
 ### Calculation Example
 
@@ -84,9 +85,10 @@ Pass Scores:
   Mobile:               3 * 1 =  3
   Trust:                4 * 1 =  4
   Performance:          4 * 1 =  4
+  Gamification:         3 * 1 =  3   (only if the app has points/badges/levels/leaderboards)
 
-Weighted Sum: 89
-DQS = (89 / 120) * 100 = 74.2
+Weighted Sum: 92
+DQS = (92 / 125) * 100 = 73.6   (or 89/120 = 74.2 if Gamification is N/A for this app)
 ```
 
 ---
@@ -108,25 +110,25 @@ DQS = (89 / 120) * 100 = 74.2
 ### Critical
 - **Criteria:** Users cannot complete core tasks, data loss risk, legal/compliance violation, security exposure through UI
 - **Examples:** Form submits silently fail with no feedback; WCAG AAA contrast violations on primary CTAs; clickjacking-susceptible overlays; no keyboard navigation for critical flows
-- **Linear Priority:** Urgent
+- **agshub Priority:** urgent
 - **SLA:** Fix before next deployment
 
 ### High
 - **Criteria:** Significant usability degradation, accessibility barriers for common assistive tech, major brand inconsistency, misleading UI patterns
 - **Examples:** Touch targets below 44px on primary actions; heading hierarchy skips levels; inconsistent button styles across pages; confusing error messages; missing form labels
-- **Linear Priority:** High
+- **agshub Priority:** high
 - **SLA:** Fix within current sprint
 
 ### Medium
 - **Criteria:** Suboptimal experience that users can work around, minor accessibility issues, inconsistent spacing/typography, missing micro-interactions
 - **Examples:** 8px grid violations; font scale inconsistencies; missing hover states; images without alt text (decorative); inconsistent border radii
-- **Linear Priority:** Medium
+- **agshub Priority:** medium
 - **SLA:** Fix within next 2 sprints
 
 ### Low
 - **Criteria:** Polish items, minor visual inconsistencies, optimization opportunities, nice-to-have improvements
 - **Examples:** Suboptimal line lengths; minor color token misuse; animation timing tweaks; FOUT on secondary fonts; decorative element alignment
-- **Linear Priority:** Low
+- **agshub Priority:** low
 - **SLA:** Address in backlog grooming
 
 ---
@@ -200,6 +202,7 @@ Where:
 │  Mobile Responsiveness     ███░░  1x   3     3      │
 │  Trust & Credibility       ████░  1x   4     4      │
 │  Performance UX            ████░  1x   4     4      │
+│  Gamification (if any)     ███░░  1x   3     3      │
 │                                                     │
 │  FINDINGS SUMMARY                                   │
 │  ─────────────────────────────────────────────      │

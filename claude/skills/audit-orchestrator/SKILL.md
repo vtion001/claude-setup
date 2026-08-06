@@ -4,10 +4,14 @@ description: >
   Runs ALL audit skills together as one pipeline and merges the results. Fans out eight
   parallel audit passes — ui-audit, ux-audit, security-audit, backend-audit, qa-audit,
   code-audit, a Lighthouse performance pass (lighthouse-mcp), and a supply-chain pass —
-  against a running app and its codebase. Augmented by MCP scanners and production signal:
-  aikido/endor/sonatype (SAST + SCA + safe-version), Sentry (real prod errors), Render
-  (prod Postgres EXPLAIN + metrics + logs), serena (symbol graph), chrome-devtools (perf
-  + a11y). De-duplicates overlapping findings, boosts prod-confirmed ones, files agshub
+  against a running app and its codebase. The ux-audit pass includes psychology-informed
+  design review (Gestalt/Fitts's/Jakob's/Miller's/Hick's laws, plus a dedicated gamification
+  & reward-psychology pass for apps with points/badges/levels/leaderboards) cross-referenced
+  against the project's own design-system manifest when one exists. Augmented by MCP scanners
+  and production signal: aikido/endor/sonatype (SAST + SCA + safe-version), Sentry (real prod
+  errors), Render (prod Postgres EXPLAIN + metrics + logs), serena (symbol graph),
+  chrome-devtools (perf + a11y), ui-ux-pro-max (design-intelligence cross-check). De-duplicates
+  overlapping findings, boosts prod-confirmed ones, files agshub
   work items for the serious ones, and prints a single unified scorecard. Supports --quick,
   --code-only, --no-agshub, --pages, and --authorize flags. This skill should be used when the user
   asks to "run all audits", "full audit", "audit everything", "complete audit sweep",
@@ -38,7 +42,7 @@ augmentation is optional and degrades gracefully when a server is unavailable.
 ```
 Phase 1  Discovery        → lock PROJECT_ROOT, detect stack, resolve localhost URL + routes,
                             resolve agshub workspace/project, auto-authenticate (once, shared by all passes)
-Phase 2  Parallel fan-out → dispatch all 7 audit agents in ONE message (Agent tool)
+Phase 2  Parallel fan-out → dispatch all 8 audit agents in ONE message (Agent tool)
 Phase 3  Aggregate        → collect structured findings, de-duplicate cross-audit overlaps
 Phase 4  File to agshub   → one work item per Critical/High finding, domain-tagged, deduped
 Phase 5  Unified report   → merged scorecard: per-domain scores + ranked findings + issue table
@@ -63,6 +67,13 @@ do not duplicate them here:
    project matches, stop and ask — never guess (per `agshub-crud`'s confirm-before-you-fire rule).
 5. **Authentication** — run code-audit's 4-strategy auto-resolve (DB creds → seed creds →
    bypass → ask). Record any test users / bypasses created so Phase 5 can report cleanup.
+   **If the login is an OAuth popup requiring live 2FA** (Google Workspace, Microsoft, etc.)
+   and none of the 4 strategies produce usable credentials or a bypass, Playwright-driven
+   passes (1 ui, 2 ux, 5 qa, 7 performance) cannot complete it in an isolated browser
+   profile — this has recurred across multiple audit sessions on OAuth-gated apps. Fall back
+   to `claude-in-chrome` against the user's already-authenticated Chrome session for all
+   browser-driven passes rather than reporting them as blocked; note the substitution in
+   Phase 5's Notes section.
 6. **Runtime handles (optional, skip if absent)** — resolve the **Sentry** org/project
    (`find_organizations`/`find_projects`) and the **Render** service + Postgres instance
    (`list_services`/`list_postgres_instances`) for this app, so the security/qa/backend passes
@@ -71,7 +82,7 @@ do not duplicate them here:
 Capture this once into a shared `DISCOVERY` context block and pass the relevant slice into
 every Phase-2 agent prompt. Skip steps 3 & 5 under `--code-only`.
 
-## Phase 2 — Parallel fan-out (the 7 passes)
+## Phase 2 — Parallel fan-out (the 8 passes)
 
 Dispatch all applicable agents **in a single message** (`dispatching-parallel-agents`
 pattern). Each agent gets: `PROJECT_ROOT`, the target URL + routes, the auth context, any
@@ -81,7 +92,7 @@ invokes its named audit skill and returns findings — **not prose**.
 | # | Agent label | Invokes | MCP augmentation (use if available; skip silently if not) |
 |---|-------------|---------|-----------------------------------------------------------|
 | 1 | ui          | `ui-audit`        | `chrome-devtools` a11y/contrast tooling for UI-state + visual checks |
-| 2 | ux          | `ux-audit`        | — |
+| 2 | ux          | `ux-audit`        | `ui-ux-pro-max` design-intelligence cross-check (color/typography/style domains — secondary input only, project's own design-system manifest wins on conflict); auto-runs its Gamification & Reward Psychology pass when the app has points/badges/levels/leaderboards |
 | 3 | security    | `security-audit`  | `aikido` (`aikido_full_scan`, `aikido_issues_list`) for SAST/secrets; **Sentry** `search_issues`/`analyze_issue_with_seer` to find security-relevant prod errors. Default `--passive`; active only if `--authorize` |
 | 4 | backend     | `backend-audit`   | **Render**: `query_render_postgres` to `EXPLAIN ANALYZE` suspected slow queries, `get_metrics` (CPU/mem/latency), `list_logs` (error rates); **Sentry** for backend exceptions |
 | 5 | qa          | `qa-audit`        | **Sentry** `search_issues` to correlate each route with real user-facing errors (a page Sentry shows erroring outranks a theoretical bug) |
