@@ -38,9 +38,10 @@ claude/                       -> installs to ~/.claude
   settings.local.json         per-project permission allowlist
   global-prefs.json           portable subset of ~/.claude.json (10 keys)
   CLAUDE.md                   global instructions (secrets redacted)
-  skills/                     70 skills, symlinks dereferenced
+  skills/                     72 skills, symlinks dereferenced
   commands/                   code-audit, goal
   hooks/                      sonar-secrets pre-tool + prompt scanners (.ps1 + .sh)
+                               ship-loop deploy-gate + review-log (.ps1 + .sh)
                                stop-respect-active.sh (macOS/Linux Stop-hook safety net)
   memory/                     persistent memory store (secrets redacted)
   statusline.ps1 / .sh        3-row custom statusline (Windows / macOS+Linux)
@@ -65,9 +66,9 @@ install.ps1      importer (supports -DryRun, -SkipTerminal)
 ## macOS / Linux port
 
 The Windows-only pieces (statusline, prompt-boost, the sidebar companion pane,
-sonar-secrets hooks) have native macOS/Linux equivalents alongside the
-originals — bash + one small Python helper, no new dependencies beyond
-`jq` and `python3`.
+sonar-secrets hooks, ship-loop hooks) have native macOS/Linux equivalents
+alongside the originals — bash + one small Python helper, no new dependencies
+beyond `jq` and `python3`.
 
 `install.ps1` doesn't wire these up (it's Windows-only); on macOS/Linux, copy
 `claude/` to `~/.claude` as usual, then add this to `~/.claude/settings.json`
@@ -78,10 +79,16 @@ yourself (merge into your existing keys, don't overwrite):
   "env": { "VISUAL": "bash /Users/YOU/.claude/prompt-boost.sh" },
   "statusLine": { "type": "command", "command": "bash /Users/YOU/.claude/statusline.sh" },
   "hooks": {
-    "PreToolUse": [{ "matcher": "Read", "hooks": [{ "type": "command",
-      "command": "bash /Users/YOU/.claude/hooks/sonar-secrets/build-scripts/pretool-secrets.sh", "timeout": 60 }] }],
+    "PreToolUse": [
+      { "matcher": "Read", "hooks": [{ "type": "command",
+        "command": "bash /Users/YOU/.claude/hooks/sonar-secrets/build-scripts/pretool-secrets.sh", "timeout": 60 }] },
+      { "matcher": "Bash", "hooks": [{ "type": "command",
+        "command": "bash /Users/YOU/.claude/hooks/ship-loop/build-scripts/pretool-deploy-gate.sh", "timeout": 30 }] }
+    ],
     "UserPromptSubmit": [{ "matcher": "*", "hooks": [{ "type": "command",
-      "command": "bash /Users/YOU/.claude/hooks/sonar-secrets/build-scripts/prompt-secrets.sh", "timeout": 60 }] }]
+      "command": "bash /Users/YOU/.claude/hooks/sonar-secrets/build-scripts/prompt-secrets.sh", "timeout": 60 }] }],
+    "SubagentStop": [{ "matcher": "sentinal|verity|aesthetica", "hooks": [{ "type": "command",
+      "command": "bash /Users/YOU/.claude/hooks/ship-loop/build-scripts/subagentstop-review-log.sh", "timeout": 15 }] }]
   }
 }
 ```
@@ -95,6 +102,14 @@ Notes:
   just asked (instead of flipping it into a second-person instruction).
 - The sonar-secrets hooks no-op safely if the `sonar` CLI isn't installed —
   same graceful-degrade behavior as the Windows originals.
+- The ship-loop hooks back the `ship-loop` skill's 5-subagent virtual team
+  (`syntax`/`sentinal`/`verity`/`aesthetica`/`flow` in `claude/agents/`):
+  `pretool-deploy-gate.sh` blocks deploy-shaped Bash commands (`vercel --prod`,
+  `git push origin main`, etc.) unless a quality-gate marker for that
+  directory is less than 4 hours old; `subagentstop-review-log.sh` appends a
+  JSONL audit line to `~/.claude/hooks/ship-loop/logs/review-log.jsonl` every
+  time a review subagent finishes. Both are backstops only — the skill's own
+  GATE step and explicit user confirmation are the primary controls.
 - `sidebar.py` is a standalone companion pane (file tree when idle, live
   file viewer when pointed at a target via `~/.claude/sidebar.target`) — pair
   it with `sidebar-split.sh` and a terminal profile/keybinding of your choice
