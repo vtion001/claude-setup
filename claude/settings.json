@@ -32,6 +32,16 @@
             "timeout": 60
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/hooks/ship-loop/build-scripts/pretool-deploy-gate.ps1",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -42,6 +52,18 @@
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
             "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "sentinal|verity|aesthetica",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/hooks/ship-loop/build-scripts/subagentstop-review-log.ps1",
+            "timeout": 15
           }
         ]
       }
