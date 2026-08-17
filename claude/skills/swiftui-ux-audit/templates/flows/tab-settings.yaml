@@ -1,0 +1,15 @@
+# Maestro flow: Settings tab.
+appId: {{BUNDLE_ID}}
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Settings"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: settings_landing
+- scroll
+- takeScreenshot: settings_scrolled

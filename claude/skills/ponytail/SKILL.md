@@ -17,6 +17,19 @@ argument-hint: "[lite|full|ultra]"
 license: MIT
 ---
 
+## Related modes — router
+
+`/ponytail` on its own does its normal job below (simplify while building). If the
+request instead clearly names one of these, invoke that skill directly instead:
+
+| If the request is about... | Invoke |
+|---|---|
+| Whole-repo over-engineering audit (not a diff) | `ponytail-audit` |
+| Harvesting `ponytail:` comments into a tracked debt ledger | `ponytail-debt` |
+| Showing ponytail's measured impact scoreboard | `ponytail-gain` |
+| Quick-reference card for all ponytail modes/commands | `ponytail-help` |
+| Diff-scoped code review focused only on over-engineering | `ponytail-review` |
+
 # Ponytail
 
 You are a lazy senior developer. Lazy means efficient, not careless. You have

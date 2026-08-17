@@ -1,0 +1,140 @@
+<!--
+  Reusable beyond literal "Gameplan" docs: badge text and every pain_points sub-heading
+  (verified_label, architecture_label, stack_label, breakdown_label) plus call_context_title,
+  phases_title/phases_why_label, and effort_title/effort_col_label are all Jinja overrides that
+  default to the original Gameplan wording if omitted. Used as-is for Implementation Guidelines
+  docs (badge="Implementation Guidelines", relabelled sections) — reuse this before building a new
+  template for anything that's shaped like "sections of verified facts + architecture + steps".
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>{{ brand_css }}</style>
+</head>
+<body>
+<div class="page">
+  <header class="brand-header">
+    {% if logo %}<img class="logo" src="{{ logo }}" alt="{{ brand.name }}">{% endif %}
+    <div>
+      <div class="brand-name">{{ brand.name }}</div>
+      <div class="brand-tagline">{{ brand.tagline }}</div>
+    </div>
+  </header>
+
+  <span class="badge">{{ badge|default("Gameplan") }}</span>
+  <h1>{{ title }}</h1>
+  <p class="lead">{{ summary }}</p>
+
+  <div class="meta-grid">
+    <div><div class="k">Prepared for</div>{{ client }}{% if company %} — {{ company }}{% endif %}{% if region %} · {{ region }}{% endif %}</div>
+    <div><div class="k">Date</div>{{ date }}</div>
+    <div><div class="k">Prepared by</div>{{ prepared_by }}</div>
+    <div><div class="k">Source</div>{{ source }}</div>
+  </div>
+
+  {% if tldr %}
+  <div class="callout">{{ tldr }}</div>
+  {% endif %}
+
+  {% if call_context %}
+  <h2>{{ call_context_title|default("Call Context") }}</h2>
+  <ul class="tight">
+    {% for item in call_context %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% for pp in pain_points %}
+  <h2>{{ pp.title }}</h2>
+  {% if pp.photos %}
+  <div class="photo-row">
+    {% for photo in pp.photos %}
+    <img src="{{ photo.src }}" alt="{{ photo.alt|default('') }}" class="venue-photo">
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if pp.verified %}
+  <div class="clause">
+    <div class="t">{{ pp.verified_label|default("What's verified") }}</div>
+    <ul class="tight">
+      {% for v in pp.verified %}<li>{{ v }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if pp.architecture %}
+  <div class="clause">
+    <div class="t">{{ pp.architecture_label|default("Recommended architecture") }}</div>
+    <p class="muted" style="white-space:pre-line">{{ pp.architecture }}</p>
+  </div>
+  {% endif %}
+  {% if pp.stack %}
+  <div class="clause">
+    <div class="t">{{ pp.stack_label|default("Tech stack") }}</div>
+    <ul class="tight">
+      {% for s in pp.stack %}<li>{{ s }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if pp.breakdown %}
+  <div class="clause">
+    <div class="t">{{ pp.breakdown_label|default("Subagent / skill breakdown") }}</div>
+    <ul class="tight">
+      {% for b in pp.breakdown %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if pp.note %}
+  <div class="callout">{{ pp.note }}</div>
+  {% endif %}
+  {% endfor %}
+
+  {% if phases %}
+  <h2>{{ phases_title|default("Recommended Build Order") }}</h2>
+  <table>
+    <thead><tr><th>Phase</th><th>What</th><th>{{ phases_why_label|default("Why this order") }}</th></tr></thead>
+    <tbody>
+    {% for p in phases %}
+      <tr><td>{{ p.phase }}</td><td>{{ p.what }}</td><td>{{ p.why }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if effort %}
+  <h2>{{ effort_title|default("Effort Estimate (ballpark — not final pricing)") }}</h2>
+  <table>
+    <thead><tr><th>Phase</th><th>{{ effort_col_label|default("Rough band") }}</th></tr></thead>
+    <tbody>
+    {% for e in effort %}
+      <tr><td>{{ e.phase }}</td><td>{{ e.band }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if open_questions %}
+  <h2>Open Questions</h2>
+  <ul class="tight">
+    {% for q in open_questions %}<li>{{ q }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if risks %}
+  <h2>Risks &amp; Honest Caveats</h2>
+  <div class="callout">{{ risks }}</div>
+  {% endif %}
+
+  {% if next_steps %}
+  <h2>Next Steps</h2>
+  <ul class="tight">
+    {% for n in next_steps %}<li>{{ n }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <footer>
+    <span>{{ brand.legal_name }} · {{ brand.website }}</span>
+    <span>{{ brand.email }} · {{ brand.telegram }}</span>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,71 @@
+{
+  "doctypeLabel": "Gameplan · Approval Request",
+  "title": "ALTO AI Systems — Development Gameplan",
+  "metaLine": "11 August 2026 &nbsp;·&nbsp; Prepared for Joshua Kim &nbsp;·&nbsp; Prepared by Vincent John Rodriguez",
+  "statusEmoji": "🟡",
+  "statusLabel": "In active development — your approval requested below",
+  "photoCaption": "28 Ringwood Street, Durack — a recent ALTO listing",
+  "sections": {
+    "exec": "Executive summary",
+    "snapshot": "The seven systems — current state",
+    "delivered": "What's already built",
+    "progress": "In progress right now",
+    "upcoming": "Upcoming improvements — the roadmap",
+    "risks": "Risks & mitigations",
+    "decisions": "Approval requested",
+    "milestone": "Why this document exists"
+  },
+  "execSummary": "On 25 July we walked through a gameplan for making ALTO the most AI-leveraged boutique agency in its market — seven systems, from instant lead response to a weekly executive report. Since then real development has happened across most of them, alongside the core website work. This document is the full picture in one place: what's already built and live, what's actively in progress, and what we'd propose building next — so it's visible and formally on the record rather than surfacing piece by piece. We're asking for your approval to (1) recognise this as real, ongoing scope alongside the core site, and (2) proceed with the next priority below.",
+  "snapshotRows": [
+    ["1", "AI Lead Concierge", "🟡", "Instant call routing + AI intent detection live on phone and social; social DMs now get an AI-answered reply directly"],
+    ["2", "Seller Intelligence", "🟡", "CMA data + suburb reports one click away for any agent; no automatic weekly “who to call” list yet"],
+    ["3", "Property Management Ops", "🔴", "Biggest open gap — no AI help yet for tenant FAQs, maintenance triage, or landlord updates"],
+    ["4", "Omnichannel Inbox", "🟡", "Social inbox unified + AI-assisted; phone/social leads now also feed the ops dashboard"],
+    ["5", "Listing Launch", "🟢", "Marketing creatives, blog posts, monthly content calendar all AI-assisted already — strongest coverage"],
+    ["6", "Executive Intelligence", "🟡", "SEO report automated weekly; no single report pulling sales + PM + marketing together yet"],
+    ["7", "Governance", "🟡", "Rules exist in how every system is built (human sign-off on anything sensitive); not yet one client-facing policy doc"]
+  ],
+  "deliveredRows": [
+    ["1", "Twilio IVR — routes inbound calls to Sales vs Property Management instantly instead of a generic line", "🟢 Live", "PRs #117–121, #138"],
+    ["2", "Call Analysis Pipeline — Twilio recording → transcription → AI intent classification → auto contact creation → Slack lead alert", "🟢 Live", "lib/call-analysis.ts"],
+    ["3", "Social inbox AI — Messenger/Instagram messages classified (buyer/seller/tenant, urgency) automatically", "🟢 Live", "PRs #93, #96, #98, #108"],
+    ["4", "AI Inbox Agent + RAG Knowledge Base — social DMs answered directly from an admin-editable knowledge base, with confidence-gated handover to a person", "🟢 Live", "PR #135, merged 6 Aug"],
+    ["5", "REX CoreLogic / RP Data integration — one-click CMA links on every Sale Properties row", "🟢 Live", "PR #89"],
+    ["6", "Automatic REX contact tagging from all signals (calls, forms, social)", "🟢 Live, weekly", "rex-enricher agent"],
+    ["7", "Suburb market-insight pages with live data", "🟢 Live", "jovet / suburb-profiles"],
+    ["8", "Draft-only QLD rent-arrears notice tool (human sign-off required before anything goes out)", "🟢 Live", "PR #110"],
+    ["9", "On-brand listing creatives, monthly content calendar, AI blog drafting", "🟢 Live", "listing-designer, marketing-monthly-planner, blog-writer"],
+    ["10", "Weekly automated SEO + AEO + GEO health report", "🟢 Live, weekly", "seo-aeo-geo-reporter"],
+    ["11", "Billing-isolation fix — the AI reading call/social intent moved to its own account after a real outage, kept separate from the knowledge-base AI", "🟡 In final review", "PR #140"],
+    ["12", "Phone + social leads forwarded to the Mac-mini ops dashboard for a shared cross-channel view", "🟡 In final review", "PR #141"]
+  ],
+  "alsoShipped": "This is a representative list, not exhaustive — day-to-day reliability fixes (OAuth error handling, retry caps, contact de-duplication and similar) ship continuously alongside the above and aren't itemised here.",
+  "inProgress": [
+    "PR #140 and PR #141 above — built and self-tested, awaiting review-and-merge before they count as fully live. No client-facing behaviour changes in either.",
+    "Documentation catch-up (this gameplan + the running changelog) reflecting current state — kept current as new systems ship."
+  ],
+  "upcoming": [
+    "<b>Property Management AI Ops</b> — the single biggest gap today: zero AI coverage for tenant FAQs, maintenance-request triage, or landlord updates, while every other team already has AI leverage. Proposed first build: a tenant-FAQ bot reusing the same knowledge-base technology already live on the sales side.",
+    "<b>Extend the AI Lead Concierge beyond social DMs</b> — a live chat widget on the website (same AI, same knowledge base, always available), then a more cautious AI email auto-reply once the chat widget is proven.",
+    "<b>Automate the weekly seller opportunity list</b> — the CMA and enrichment data already exist; turn today's on-demand lookup into a proactive weekly “top opportunities” push for agents.",
+    "<b>One consolidated executive report</b> — today only SEO is automated weekly; extend it to pull sales pipeline, PM risk, and marketing performance into a single weekly view.",
+    "<b>A single governance policy document</b> — the safety rules already exist in how every system is built (human approval on anything sensitive, draft-only for compliance-adjacent actions); formalise them into one ALTO-facing document covering AI disclosure and escalation rules."
+  ],
+  "riskRows": [
+    ["AI/agentic development growing without a single shared point of visibility or sign-off", "Med", "Scope and effort not formally tracked against the core site engagement", "This document, and a recurring cadence of gameplan updates going forward", "Addressed by this document"],
+    ["Third-party AI billing lapse breaks lead detection silently (already happened once)", "High", "Missed/misclassified leads on phone + social until caught", "Isolated the knowledge-base AI onto its own billing account so one lapse can't take down both", "Mitigated"],
+    ["Property Management runs fully manual while every other team already has AI leverage", "Med", "Uneven efficiency gain across the business; PM team left behind", "Proposed as the top roadmap priority above", "Awaiting your approval"],
+    ["No formal customer-facing AI-disclosure or escalation policy yet", "Low", "Governance/compliance optics as AI-assisted replies scale", "Roadmap item 5 above — one policy document", "Not started"]
+  ],
+  "decisions": [
+    "<b>Recognise the AI/agentic systems work above</b> as real, ongoing development alongside the core website scope — not incidental extras.",
+    "<b>Approve proceeding with the top roadmap priority</b> — Property Management AI Ops — since it's the single biggest gap and opportunity today.",
+    "<b>Confirm priority order</b> for the remaining roadmap items (seller-list automation, consolidated executive report, governance policy doc) so effort lines up with what matters most to ALTO.",
+    "<b>Sign off that this document accurately reflects</b> current and planned development, as the reference point for any future scope or invoicing conversation."
+  ],
+  "milestoneText": "This is the master record of ALTO's AI/agentic development: what's been built (with evidence), what's actively in progress, and what's proposed next. It exists so this work is visible and agreed, not discovered after the fact — and so any future conversation about scope, priorities, or invoicing has a clear, shared reference point. It will be updated as new systems ship or priorities shift.",
+  "approval": {
+    "ask": "Requesting your approval to proceed as outlined above — reply here, or sign and date below."
+  },
+  "closingLine": "Could you confirm your approval on the above, or would it be easier to walk through it together first?"
+}

@@ -59,3 +59,18 @@ A delivery report tells a client **what shipped, what's next, what's at risk, an
 ## Reference
 Worked example: `bricklane-property-group/docs/DELIVERY-REPORT-2026-07-18.md` (progress + system doc + audit appendix, grounded in real PRs/tests).
 Methodology: Teamwork/Atlassian status-report guidance; freelance milestone-payment practice (document the trail); arc42 / C4 for the system-doc structure.
+
+## Client-specific templates
+
+Some clients have a locked-in branded template — check for one before writing a report
+from scratch, and use it instead of the generic Markdown-only flow above.
+
+- **ALTO Property** → `alto-property/` (this skill's directory). White-background,
+  ALTO-red letterhead PDF with a real REX-CRM listing photo as the cover image and the
+  ALTO logo top-left. Has its own `render.mjs` (HTML→PDF via Playwright) + brand rules —
+  read `alto-property/README.md` before generating any ALTO delivery report; do not use
+  `report_orchestrator.py pdf-export`'s auto brand-extraction for ALTO (it produces the
+  wrong palette, no logo, no photo).
+
+Add a new client subfolder here the same way whenever a client's report format gets
+locked in, so it doesn't get rebuilt from scratch next time.

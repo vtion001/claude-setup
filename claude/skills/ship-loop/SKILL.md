@@ -20,6 +20,19 @@ Skip this stage if a plan already exists for the requested work (e.g. the user a
 - Invoke `brainstorming` to clarify scope, then `writing-plans` to produce the implementation plan.
 - Don't proceed to BUILD without a plan the user has approved — this is a hard gate, not a formality.
 
+**Website-build template.** When the requested work is a new marketing/portfolio-style website
+(not an existing project's feature/fix), check `~/Desktop/REPOSITORY/msrose-website/` first —
+it's a working Next.js 16 + React 19 + Tailwind + GSAP codebase (originally built for M1217 Media
+Lab, kept as a standalone reference) with a documented set of reusable, content-agnostic motion
+components: scroll-reveal, canvas pixel-mosaic image reveal, SPA-style page transitions with a
+branded preloader, and a hover text-scramble effect — see its `README.md` for the full component
+table, the design-token pattern (swap Tailwind theme + fonts, keep the components), and two
+known GSAP/React-effect gotchas (`usePrefersReducedMotion`'s stale-first-render race,
+StrictMode's dev-only double-invoke) worth knowing before extending any of them further. Bring
+this up as an option during brainstorming rather than assuming it — a from-scratch build is
+sometimes the right call — and if used, copy only the pieces the new site actually needs rather
+than the whole tree.
+
 ### 3. BUILD
 - Delegate to the `syntax` subagent with the approved plan as its task.
 - Keep this a single subagent, not split further — planning/implementation/testing share too much context to fragment across agents (this is deliberate, not an oversight: see Anthropic's guidance on when multi-agent split helps vs. hurts).

@@ -1,34 +1,36 @@
 {
   "cleanupPeriodDays": 30,
   "env": {
-    "API_TIMEOUT_MS": "300000",
-    "VISUAL": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/prompt-boost.ps1",
-    "CLAUDE_REAL_EDITOR": "notepad"
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/statusline.ps1",
-    "padding": 0,
-    "refreshInterval": 5
+    "VISUAL": "bash /Users/archerterminez/.claude/prompt-boost.sh"
   },
   "permissions": {
     "deny": [
       "Bash(rm -rf /)",
       "Bash(rm -rf /System*)",
-      "Bash(del /f /s /q C:\\Windows*)",
       "Bash(rm -rf /usr)",
       "Bash(sudo rm -rf /)"
     ],
     "defaultMode": "auto"
   },
+  "model": "opusplan",
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/archerterminez/.claude/hooks/stop-respect-active.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Read",
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -File C:/Users/VJ_Rodriguguez/.claude/hooks/sonar-secrets/build-scripts/pretool-secrets.ps1",
+            "command": "bash /Users/archerterminez/.claude/hooks/sonar-secrets-pretool.sh",
             "timeout": 60
           }
         ]
@@ -38,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/hooks/ship-loop/build-scripts/pretool-deploy-gate.ps1",
+            "command": "bash /Users/archerterminez/.claude/hooks/ship-loop/build-scripts/pretool-deploy-gate.sh",
             "timeout": 30
           }
         ]
@@ -50,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
+            "command": "bash /Users/archerterminez/.claude/hooks/sonar-secrets-prompt.sh",
             "timeout": 60
           }
         ]
@@ -62,14 +64,26 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:/Users/VJ_Rodriguguez/.claude/hooks/ship-loop/build-scripts/subagentstop-review-log.ps1",
+            "command": "bash /Users/archerterminez/.claude/hooks/ship-loop/build-scripts/subagentstop-review-log.sh",
             "timeout": 15
           }
         ]
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /Users/archerterminez/.claude/statusline.sh"
+  },
   "enabledPlugins": {
+    "memory-toolkit@memory-toolkit": true,
+    "apple-skills@indie-apple-stack": true,
+    "swiftui-pro@swiftui-agent-skill": true,
+    "swift-concurrency-pro@swift-concurrency-agent-skill": true,
+    "swift-testing-pro@swift-testing-agent-skill": true,
+    "core-data-expert@core-data-agent-skill": true,
+    "ios-simulator-skill@conorluddy": true,
+    "claude-md-management@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,
     "huggingface-skills@claude-plugins-official": true,
     "fiftyone@claude-plugins-official": true,
@@ -126,7 +140,6 @@
     "opsera-devsecops@claude-plugins-official": true,
     "atomic-agents@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true,
     "optibot@claude-plugins-official": true,
     "stripe@claude-plugins-official": true,
     "expo@claude-plugins-official": true,
@@ -142,11 +155,80 @@
     "session-report@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": true,
     "explanatory-output-style@claude-plugins-official": true,
-    "qodo@claude-plugins-official": true
+    "qodo@claude-plugins-official": true,
+    "claude-mem@thedotmack": true
   },
-  "effortLevel": "high",
+  "extraKnownMarketplaces": {
+    "memory-toolkit": {
+      "source": {
+        "source": "github",
+        "repo": "IlyaGorsky/memory-toolkit"
+      }
+    },
+    "indie-apple-stack": {
+      "source": {
+        "source": "github",
+        "repo": "rshankras/claude-code-apple-skills"
+      }
+    },
+    "swiftui-agent-skill": {
+      "source": {
+        "source": "github",
+        "repo": "twostraws/SwiftUI-Agent-Skill"
+      }
+    },
+    "swift-concurrency-agent-skill": {
+      "source": {
+        "source": "github",
+        "repo": "twostraws/Swift-Concurrency-Agent-Skill"
+      }
+    },
+    "swift-testing-agent-skill": {
+      "source": {
+        "source": "github",
+        "repo": "twostraws/Swift-Testing-Agent-Skill"
+      }
+    },
+    "core-data-agent-skill": {
+      "source": {
+        "source": "github",
+        "repo": "AvdLee/Core-Data-Agent-Skill"
+      }
+    },
+    "conorluddy": {
+      "source": {
+        "source": "github",
+        "repo": "conorluddy/ios-simulator-skill"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "claude-code-skills": {
+      "source": {
+        "source": "github",
+        "repo": "alirezarezvani/claude-skills"
+      }
+    },
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
+    }
+  },
+  "effortLevel": "xhigh",
+  "tui": "fullscreen",
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
   "skipDangerousModePermissionPrompt": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "skipAutoPermissionPrompt": true
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true
 }

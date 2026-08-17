@@ -1,0 +1,45 @@
+{
+  "doctypeLabel": "Progress Report",
+  "title": "ALTO AI Systems — Progress Report",
+  "metaLine": "11 August 2026 &nbsp;·&nbsp; Prepared for Joshua Kim &nbsp;·&nbsp; Prepared by Vincent John Rodriguez",
+  "statusEmoji": "🟡",
+  "statusLabel": "Amber — active build, on track",
+  "photoCaption": "28 Ringwood Street, Durack — a recent ALTO listing",
+  "execSummary": "Since 25 July, the inbox gained its first real auto-reply capability — Messenger/Instagram messages now get answered directly from an admin-editable knowledge base, live since 6 August. Two more pieces are built and sitting in final PR review: a billing-isolation fix for the AI that reads call/social intent (closing a real outage we hit), and a one-way lead bridge so phone + social leads also show up on the Mac-mini ops dashboard. Nothing below is claimed as done unless it's merged and verified; the two “in review” items are flagged as such, not rounded up to “live.”",
+  "snapshotRows": [
+    ["1", "AI Lead Concierge", "🟡", "Social DMs now get an instant AI-answered reply; phone/email leads still just alert a person"],
+    ["2", "Seller Intelligence", "🟡", "CMA data + suburb reports one click away for any agent; no automatic weekly “who to call” list yet"],
+    ["3", "Property Management Ops", "🔴", "Biggest open gap — no AI help yet for tenant FAQs, maintenance triage, or landlord updates"],
+    ["4", "Omnichannel Inbox", "🟡", "Social inbox unified + AI-assisted; phone/social leads now also feed the ops dashboard (pending merge)"],
+    ["5", "Listing Launch", "🟢", "Marketing creatives, blog posts, monthly content calendar all AI-assisted already"],
+    ["6", "Executive Intelligence", "🟡", "SEO report automated weekly; no single report pulling sales + PM + marketing together yet"],
+    ["7", "Governance", "🟡", "Rules exist in how systems are built (human sign-off on anything sensitive); not yet one policy doc"]
+  ],
+  "deliveredRows": [
+    ["D1", "Inbox now answers clients itself — Messenger/Instagram messages checked against a knowledge base; confident answers go out immediately, unconfident ones hand over to a person with a WhatsApp alert + draft attached. Anyone with admin access can add/edit what it knows.", "✅ Delivered &amp; verified", "PR #135, merged 6 Aug 2026 — live in production"],
+    ["D2", "Billing-isolation fix for the AI reading call + social intent — that account ran out of credits recently and quietly broke lead detection on both channels until caught. Moved to a separate, isolated account.", "🟡 In final review", "PR #140, open — merge pending"],
+    ["D3", "Phone + social leads now also forward to the Mac-mini ops dashboard — previously a hot lead only lived in this website's admin. First step toward one shared cross-channel view.", "🟡 In final review", "PR #141, open — merge pending"]
+  ],
+  "alsoShipped": "Also shipped this period: five smaller reliability/bug fixes (inquiries no longer silently dropped, social-planner reconnect button, IVR max-retry cap, Meta OAuth error handling, social sender name/photo resolution) — not gameplan-mapped features, just the inbox/dialer working more reliably day to day.",
+  "inProgress": [
+    "PR #140 and PR #141 (D2, D3 above) — built and self-tested, awaiting review-and-merge before they count as live. No client-facing behaviour changes in either; both are backend reliability/visibility work.",
+    "Documentation catch-up (gameplan + changelog) reflecting the above — PR #142, open."
+  ],
+  "upcoming": [
+    "<b>A live chat widget on the website itself</b> — same AI, same knowledge base, but always available (no messaging-platform time limits). Fastest to build on what already exists.",
+    "<b>The same AI answering emails</b> — bigger step; an email reply reads as more official than a chat message, so it needs a more cautious “when in doubt, don't send” setting.",
+    "<b>KB edit-in-place polish</b> — right now, editing something already in the knowledge base means deleting it and re-adding it. Small usability fix for whoever maintains it day to day."
+  ],
+  "riskRows": [
+    ["Third-party AI billing lapse breaks lead detection silently (already happened once)", "High", "Missed/misclassified leads on phone + social until caught", "Swapped provider + isolated the KB agent onto its own billing account so one lapse can't take down both", "🟡 In final review (D2)"],
+    ["Auto-reply is social-DM-only — phone/email leads still get zero auto-response", "Med", "Slower response on the highest-volume channels (phone/email)", "Proposed next: chat widget, then email — needs your steer on priority", "Awaiting decision"],
+    ["KB editing requires delete + recreate, not in-place edit", "Low", "Slower day-to-day upkeep for whoever maintains the knowledge base", "Small polish item, queued as option 3 above", "Not started"]
+  ],
+  "decisions": [
+    "<b>Which of the three “Upcoming” options matters most right now</b> — chat widget, email auto-reply, or the KB edit polish?",
+    "<b>OK to merge PR #140 and #141</b> once reviewed? Both are backend-only (billing isolation + dashboard visibility), no client-facing change — recommended to proceed.",
+    "<b>Scope/visibility flag:</b> this AI-systems work (RAG knowledge base, intent classification, cross-channel lead bridge) has grown into real, ongoing build separate from the original site scope. Flagging it here so it's tracked and visible on your side, rather than surfacing after the fact — happy to align on how this gets accounted for."
+  ],
+  "milestoneText": "D1 is merged, live, and independently verifiable in production (PR #135). D2 and D3 are built with passing self-tests but not yet merged — they're listed as “in final review,” not “delivered,” until they land on <code>main</code>. This report is the record of what was actually built and checked in this period versus what's still pending review, so any sign-off or invoicing tracks to real, verified work rather than work-in-progress.",
+  "closingLine": "Which of these matters most to you right now? Happy to walk through any of it live if that's easier than reading it."
+}

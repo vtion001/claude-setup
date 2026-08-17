@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif; margin:0; background:#fff; color:{{INK}}; font-size:13px; line-height:1.5; }
+  .page-pad { padding: 0 56px; }
+
+  /* Letterhead */
+  .letterhead { display:flex; align-items:center; justify-content:space-between; padding:36px 56px 20px; }
+  .letterhead img { height:22px; }
+  .doctype { color:{{RED}}; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+  .hr { border:0; border-top:1.5px solid {{RED}}; margin:0 56px; }
+
+  /* Cover */
+  .cover-body { padding:36px 56px 8px; }
+  h1 { font-size:29px; line-height:1.25; margin:0 0 12px; color:{{INK}}; font-weight:700; letter-spacing:-.01em; }
+  .meta { color:{{GREY}}; font-size:12.5px; margin-bottom:20px; }
+  .status-line { font-size:13px; color:{{INK}}; font-weight:600; margin-bottom:26px; }
+  .status-line b { color:{{RED}}; }
+  .photo-wrap { padding:0 56px; }
+  .photo-wrap img { width:100%; height:280px; object-fit:cover; border-radius:10px; display:block; }
+  .caption { color:{{RED}}; font-size:11.5px; font-style:italic; margin-top:8px; }
+
+  /* Sections */
+  .content { padding:20px 56px 10px; }
+  h2 { color:{{RED}}; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin:30px 0 2px; break-after: avoid; }
+  h2::after { content:''; display:block; width:36px; height:2px; background:{{RED}}; margin-top:8px; }
+  p.body-text { margin: 10px 0 0; color:{{INK}}; }
+
+  /* Tables (shared pattern) */
+  table.rpt { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; break-inside: auto; }
+  table.rpt th { background:#fff; color:{{RED}}; text-align:left; padding:8px 9px; font-weight:700; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; border-bottom:2px solid {{RED}}; }
+  table.rpt td { padding:8px 9px; border-bottom:1px solid #eee5e0; vertical-align:top; }
+  table.rpt tr { break-inside: avoid; }
+  table.rpt .b { font-weight:600; }
+  table.rpt .rag { text-align:center; font-size:13px; }
+  table.rpt .muted { color:{{GREY}}; }
+  table.rpt .status { color:{{RED}}; font-weight:600; white-space:nowrap; }
+  .also-shipped { color:{{GREY}}; font-size:11.5px; font-style:italic; margin-top:10px; }
+
+  /* Lists */
+  ol.rpt-list { margin:10px 0 0; padding-left:20px; }
+  ol.rpt-list li { margin-bottom:8px; }
+  ol.rpt-list li::marker { color:{{RED}}; font-weight:700; }
+  ol.rpt-list b { color:{{INK}}; }
+
+  /* Milestone callout */
+  .callout { background:{{RED_WASH}}; border-left:3px solid {{RED}}; padding:14px 18px; margin-top:10px; font-size:12.5px; color:{{INK}}; }
+
+  /* Approval box — for approval-request documents (gameplans, sign-off asks) */
+  .approval-box { border:1.5px solid {{RED}}; border-radius:8px; padding:16px 20px; margin-top:10px; }
+  .approval-box .ask { font-size:13px; color:{{INK}}; margin-bottom:14px; }
+  .approval-line { display:flex; gap:40px; font-size:12.5px; color:{{GREY}}; margin-top:8px; }
+  .approval-line .field { border-bottom:1px solid {{GREY}}; min-width:160px; padding-bottom:4px; }
+
+  .closing { margin:26px 0 10px; font-size:13.5px; font-weight:600; color:{{INK}}; }
+  .closing b { color:{{RED}}; }
+
+  .footer-space { height:30px; }
+</style>
+</head>
+<body>
+  <div class="letterhead"><img src="{{LOGO_SRC}}"><div class="doctype">{{DOCTYPE_LABEL}}</div></div>
+  <hr class="hr">
+  <div class="cover-body">
+    <h1>{{TITLE}}</h1>
+    <div class="meta">{{META_LINE}}</div>
+    <div class="status-line">Overall status: <b>{{STATUS_EMOJI}} {{STATUS_LABEL}}</b></div>
+  </div>
+  <div class="photo-wrap">
+    <img src="{{PHOTO_SRC}}" alt="ALTO property">
+    <div class="caption">{{PHOTO_CAPTION}}</div>
+  </div>
+
+  <div class="content">
+    <h2>{{SEC_EXEC}}</h2>
+    <p class="body-text">{{EXEC_SUMMARY}}</p>
+
+    <h2>{{SEC_SNAPSHOT}}</h2>
+    <table class="rpt">
+      <thead><tr><th style="width:26px">#</th><th>System</th><th style="width:50px">Status</th><th>In plain terms</th></tr></thead>
+      <tbody>{{SNAPSHOT_ROWS}}</tbody>
+    </table>
+
+    <h2>{{SEC_DELIVERED}}</h2>
+    <table class="rpt">
+      <thead><tr><th style="width:30px">#</th><th>Deliverable</th><th style="width:110px">Status</th><th>Evidence</th></tr></thead>
+      <tbody>{{DELIVERED_ROWS}}</tbody>
+    </table>
+    <div class="also-shipped">{{ALSO_SHIPPED}}</div>
+
+    <h2>{{SEC_PROGRESS}}</h2>
+    <ol class="rpt-list">{{IN_PROGRESS_ITEMS}}</ol>
+
+    <h2>{{SEC_UPCOMING}}</h2>
+    <ol class="rpt-list">{{UPCOMING_ITEMS}}</ol>
+
+    <h2>{{SEC_RISKS}}</h2>
+    <table class="rpt">
+      <thead><tr><th>Risk</th><th style="width:40px">Sev</th><th>Impact</th><th>Mitigation</th><th style="width:100px">Status</th></tr></thead>
+      <tbody>{{RISK_ROWS}}</tbody>
+    </table>
+
+    <h2>{{SEC_DECISIONS}}</h2>
+    <ol class="rpt-list">{{DECISIONS_ITEMS}}</ol>
+    {{APPROVAL_BOX}}
+
+    <h2>{{SEC_MILESTONE}}</h2>
+    <div class="callout">{{MILESTONE_TEXT}}</div>
+
+    <div class="closing">{{CLOSING_LINE}}</div>
+    <div class="footer-space"></div>
+  </div>
+</body>
+</html>

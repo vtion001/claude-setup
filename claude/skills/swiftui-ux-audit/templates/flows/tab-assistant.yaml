@@ -1,0 +1,15 @@
+# Maestro flow: AI Assistant tab. We do NOT type into the input or
+# trigger LLM calls — those are non-deterministic and may incur cost.
+appId: {{BUNDLE_ID}}
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Assistant"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: assistant_landing
+- takeScreenshot: assistant_input_focused

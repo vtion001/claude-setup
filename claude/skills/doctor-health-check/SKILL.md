@@ -11,8 +11,9 @@ description: >
   data-integrity rules: a Critical/negative finding is only reported after being verified
   firsthand against the authoritative source. Use when the user says "do a health check",
   "health check the app", "is everything up and running", "check the code/agents/cron/
-  integrations", "doctor", or asks to audit operational health end-to-end. Scales from a
-  quick pulse to a full multi-domain sweep + fix.
+  integrations", "doctor", "what still needs to be configured", "configuration inventory",
+  "what's not set up yet", "list everything that needs an API key/account", or asks to audit
+  operational health end-to-end. Scales from a quick pulse to a full multi-domain sweep + fix.
 ---
 
 # Doctor — Operational Health Check
@@ -40,7 +41,9 @@ scorecard and, when asked, a verified fix.
 "do a health check", "health check the app", "is everything running", "check the code +
 agents + cron + integrations", "investigate backend/integrations", "doctor". Scale to the
 ask: a quick pulse is Phases 0–1; the full sweep is Phases 0–5; add Phase 6 only when the
-user wants fixes.
+user wants fixes. **"what needs configuring", "what's not set up yet", "configuration
+inventory"** → `--config-only` (Phase 0 + the integrations verdict, straight to the table —
+see Flags).
 
 ## Hard rules — Data Integrity (never pretend)
 
@@ -97,6 +100,21 @@ Lock `PROJECT_ROOT = cwd`. Never scan `node_modules/`, `.git/`, `.next/`, `dist/
   plists in `~/Library/LaunchAgents/`, any `runtime/schedule.json`), and API routes
   (`find app/api -name route.ts`). Check `launchctl list | grep <prefix>` — the middle column
   is the **last exit status** (non-zero = a lead to chase in the logs, NOT a conclusion).
+- **Third-party integration inventory** — this is the step that turns "env presence" into an
+  actual configuration checklist a human can act on, and it's the part most health checks skip.
+  Two sources, cross-referenced (neither alone is complete):
+  1. **Documented** — the project's own `CLAUDE.md`/`README`/`AGENTS.md` "Environment
+     Variables" section, `.env.example`, and any handoff docs (`docs/handoff/`) are the
+     project's own record of intent. Read them; don't re-derive from scratch what the repo
+     already documents.
+  2. **Discovered** — grep for every place the codebase actually reaches for an external
+     service, since docs drift: `getenv(`/`process.env.`/`import.meta.env.` references, SDK
+     client imports (`new Stripe(`, `Resend(`, `require('twilio')`), webhook route names, OAuth
+     redirect URIs, third-party script tags (`gtag`, `recaptcha`, Maps/Places loaders). A var
+     referenced in code but absent from the docs is itself a finding (undocumented dependency).
+  For each discovered integration, record: **name, purpose, where it's consumed (file:line),
+  and current status** — this feeds the Configuration & Integration Inventory table in Phase 5,
+  the deliverable this whole step exists to produce.
 
 ## Phase 1 — Build gates
 
@@ -140,10 +158,26 @@ prompts + paths to the project. The shape:
 - **Domains**: `codebase` (latent bugs, error handling, dead code, hook misuse), `api-backend`
   (auth-guard *consistency* across every route — the classic bug is an incomplete sweep that
   guards some siblings and leaves others open; input validation; error-swallowing),
-  `integrations` (per-integration status: configured/degraded/broken, missing env guards,
-  fail-open webhooks, wrong/legacy IDs, hardcoded secrets), `agents` (frontmatter valid?
-  referenced scripts/paths exist? tool grants sufficient for the agent's job?),
-  `cron-scheduling` (reconcile launchd ↔ schedule/registry ↔ real endpoints; read the logs).
+  `integrations` (the Phase 0 inventory, resolved to a verdict per item — see below), `agents`
+  (frontmatter valid? referenced scripts/paths exist? tool grants sufficient for the agent's
+  job?), `cron-scheduling` (reconcile launchd ↔ schedule/registry ↔ real endpoints; read logs).
+- **`integrations` domain, specifically**: for every item the Phase 0 inventory found, resolve
+  one of four verdicts — never stop at "a key exists somewhere":
+  - **Not configured** — no key/account anywhere (env, settings DB, secrets manager). The
+    common case for anything gated behind a third-party account nobody's created yet.
+  - **Configured but not verified live** — a key is present, but the *feature it powers* was
+    never independently checked end-to-end (an env var isn't proof the integration works —
+    scopes can be wrong, the key can be revoked, the code path can be dead). Curl/exercise the
+    actual surface (does the analytics script tag render? does the webhook 200 a signed test
+    payload? does the OAuth token still exchange?) before calling it healthy.
+  - **Live and verified** — checked directly this run, with the evidence (a real curl result,
+    a real API response), not inferred from "the key is set."
+  - **Broken** — configured but demonstrably failing (expired token, wrong scope, 401/403 on a
+    live check, mismatched redirect URI). This is the class most worth surfacing loudly — a
+    silently-dead integration reads as "fine" to anyone who only checks "is there a key."
+  Every "Not configured" and "Configured but not verified" item needs a next step, not just a
+  status: who can unblock it (the operator vs. the end client vs. purely a config change we can
+  make ourselves), and the exact account/setting that closes it out.
 - Each finder returns **structured JSON** (`{domain, score, summary, findings[]}` with
   `severity, title, location(file:line), evidence, remediation`) and is told: **report only
   what you verified by reading the file; cite file:line; omit speculation.**
@@ -181,10 +215,20 @@ Methodology: golden signals + liveness/readiness (layers).
 ## 🔴 High
 ## 🟡 Medium (grouped)
 ## 🟢 Confirmed healthy
+
+## Configuration & Integration Inventory
+| Item | Purpose | Status | Owner | Next step |
+|------|---------|--------|-------|-----------|
+| ..   | ..      | 🔴 Not configured / 🟡 Unverified / 🟢 Live / ⚠️ Broken | us / operator / end-client | .. |
+
 ## Needs the operator (things you cannot do in-repo — with what you did/didn't verify)
 ```
 
 Lead with what you verified live. Every finding carries `file:line` (or log path) evidence.
+**The Configuration & Integration Inventory is a standing, required section, not optional
+garnish** — it's the single table a non-technical stakeholder actually reads, and it's cheap
+to produce even on a `--quick` run (Phase 0 discovery + live curls, no subagent workflow
+needed) — don't gate it behind the full Phase 4 deep scan.
 
 ## Phase 6 — Remediation (only when asked)
 
@@ -244,6 +288,12 @@ an env flag so an untested check can't drop live traffic. Document the switch.
 
 - `--quick` → Phases 0–1 only (build pulse).
 - `--code-only` → skip the dev server + Playwright; static + deps + workflow only.
+- `--config-only` → **just the Configuration & Integration Inventory** — Phase 0 discovery +
+  live verification of every discovered integration, straight to that one table. Skips build
+  gates, Playwright, dependency audit, and the codebase/api-backend/agents/cron deep-scan
+  domains entirely. This is the right default when the ask is "what's not set up yet" /
+  "what needs configuring" rather than a full operational health sweep — don't run the whole
+  pipeline when only this table was asked for.
 - `--fix` → include Phase 6 (else stop at the scorecard and offer to remediate).
 
 ## Related skills

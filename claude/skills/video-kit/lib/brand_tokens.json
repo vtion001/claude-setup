@@ -1,0 +1,22 @@
+{
+  "name": "Brick Lane Property Group",
+  "wordmark": "BRICKLANE",
+  "_source": "Pulled from the codebase: client/src/assets/main.css (--ink #111111, --bg #fff, --muted = ink@58%), tailwind.config.js (display=Jost, body=DM Sans), and the live /images/bricklane-logo.svg (BRICKLANE in Inter 500 + a triangle glyph).",
+  "colors": {
+    "ink": "#111111",
+    "bg": "#FFFFFF",
+    "white": "#FFFFFF",
+    "muted_alpha": 0.58
+  },
+  "fonts": {
+    "display": "Jost.ttf",
+    "body": "DMSans.ttf",
+    "logo": "Inter.ttf"
+  },
+  "weights": { "display": 400, "body": 400, "logo": 500 },
+  "tracking": { "logo": 0.31, "eyebrow": 0.25, "disp": 0.094 },
+  "cta": "Get a free appraisal",
+  "url": "bricklanepg.com.au",
+  "tagline": "Fewer properties per manager. On purpose.",
+  "capitals": "Sydney · Melbourne · Brisbane · Perth"
+}

@@ -39,7 +39,7 @@ Alerts fire to Telegram when:
 - Any deploy failure
 - Prometheus target down > 5 min
 
-**Telegram:** Bot `8229018348:AAGESDQ...` → Chat ID `8231412720`
+**Telegram:** Bot `${TELEGRAM_BOT_TOKEN}...` → Chat ID `${TELEGRAM_CHAT_ID}`
 
 ## Render Production Links
 
