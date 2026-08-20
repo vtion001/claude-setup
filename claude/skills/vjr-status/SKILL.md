@@ -5,7 +5,7 @@ description: Show the VJR business dashboard — clients grouped by lifecycle st
 
 # VJR Business Status
 
-Run from the repo root (`/mnt/c/Users/VJ_Rodriguguez/Desktop/Repository/VJR-Digital-Solutions`):
+Run from the repo root (`~/Desktop/VJR-Digital-Solutions`):
 
 ```bash
 python3 vjros.py status                 # whole pipeline, grouped by stage

@@ -1,0 +1,6 @@
+appId: com.pookoo.app
+---
+- launchApp
+- assertVisible: "Pookoo"
+- assertVisible: "Quick Actions"
+- takeScreenshot: home

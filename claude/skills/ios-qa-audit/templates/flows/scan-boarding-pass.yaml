@@ -1,0 +1,9 @@
+appId: com.pookoo.app
+---
+- launchApp
+- tapOn: "Flights"
+- assertVisible: "Scan"
+- tapOn: "Scan"
+- assertVisible: "Scan Boarding Pass"
+- takeScreenshot: scanner
+- back

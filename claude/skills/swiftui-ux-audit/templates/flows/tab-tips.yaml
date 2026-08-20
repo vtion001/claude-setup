@@ -1,0 +1,25 @@
+# Maestro flow: Tips/Social tab.
+appId: {{BUNDLE_ID}}
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Tips"
+    optional: true
+- tapOn:
+    text: "Social"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: tips_landing
+- scroll
+- takeScreenshot: tips_scrolled
+- tapOn:
+    index: 0
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: tips_detail
+- back

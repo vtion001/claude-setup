@@ -4,7 +4,11 @@ A portable snapshot of a Claude Code configuration: settings, statusline, termin
 background, skills, commands, hooks and helper scripts. Clone it on a new machine,
 run one script, and the setup is reproduced.
 
-Exported from Windows 11 · Claude Code 2.1.x · ~5.3 MB
+Originally exported from Windows 11 · Claude Code 2.1.x. Last synced from macOS
+2026-08-21 — `claude/` now reflects both machines' skills/agents/commands as of
+that date, plus a redacted MCP server export (`mcp.json.example`, new this sync);
+`install.ps1` (Windows-only) and the ported `.sh` hooks/scripts both still apply,
+see "External dependencies" and "Notes" below.
 
 ---
 
@@ -26,7 +30,10 @@ Then:
 1. Run `claude` — the 74 plugins listed in `settings.json` reinstall themselves from the marketplace on first start.
 2. Run `/login` to authenticate. **Credentials are never exported.**
 3. Fill in `~/.claude/.env` with your real tokens (see `.env.example`).
-4. Restart Windows Terminal to pick up the background image.
+4. Restore MCP servers: copy `claude/mcp.json.example`'s `mcpServers` block into your
+   `~/.claude.json`, fill in the `<FILL_IN>` placeholders (`magic`/`apify`/`waypoint` need real
+   values; the rest need none), then `claude mcp list` to verify.
+5. Restart Windows Terminal to pick up the background image.
 
 ---
 
@@ -38,8 +45,15 @@ claude/                       -> installs to ~/.claude
   settings.local.json         per-project permission allowlist
   global-prefs.json           portable subset of ~/.claude.json (10 keys)
   CLAUDE.md                   global instructions (secrets redacted)
-  skills/                     72 skills, symlinks dereferenced
-  commands/                   code-audit, goal
+  skills/                     128 skills, symlinks dereferenced (includes _archived-2026-08-14/,
+                               the skill-consolidation project's retired originals)
+  mcp.json.example            9 user-scope MCP servers from ~/.claude.json, secrets redacted to
+                               <FILL_IN> placeholders. Project-scoped MCP servers (per-repo, `-s
+                               local`) are NOT included — those live in each project's own config.
+                               claude.ai-connected OAuth connectors (Gmail, Slack, etc.) are
+                               account-level, not machine config — re-authenticate via claude.ai,
+                               nothing to restore here.
+  commands/                   44 commands (code-audit, goal, and per-role agent commands)
   hooks/                      sonar-secrets pre-tool + prompt scanners (.ps1 + .sh)
                                ship-loop deploy-gate + review-log (.ps1 + .sh)
                                stop-respect-active.sh (macOS/Linux Stop-hook safety net)
@@ -166,6 +180,11 @@ No live secrets are committed. Before export:
   `memory/reference_telegram_bot.md` and `skills/ags-monitor/SKILL.md` — all replaced
   with `${TELEGRAM_BOT_TOKEN}` / `${TELEGRAM_CHAT_ID}` placeholders
 - Bundle was scanned for OpenAI/GitHub/Google/AWS/Slack keys, JWTs and private keys — clean
+- **2026-08-18 re-sync:** re-scanned with the same pattern set plus a broader
+  password/api-key/token keyword pass — clean, one real finding: `video-kit/.env`
+  (live Pexels + Pixabay API keys) was caught by the existing `.gitignore` rule and
+  never staged; added `video-kit/.env.example` (placeholder keys) so the skill's
+  env requirements are still documented.
 
 Real values go in `~/.claude/.env`, which `.gitignore` blocks.
 
@@ -176,14 +195,15 @@ Real values go in `~/.claude/.env`, which `.gitignore` blocks.
 
 ## External dependencies
 
-11 skills were symlinks to repos outside `.claude`. They've been **dereferenced** (real
-content copied in), so this bundle is self-contained — but they are snapshots. If you
-still maintain the source repos, re-link after install:
+As of the 2026-08-18 macOS sync, 11 skills are symlinks to a repo outside `.claude` —
+all of them into VJR-Digital-Solutions now (the `ags-*` skills that used to be
+symlinks on Windows are plain directories on this machine). They've been
+**dereferenced** (real content copied in) for this bundle, so it's self-contained —
+but they are snapshots. If you still maintain the source repo, re-link after install:
 
 | Skills | Original source |
 |---|---|
-| `ags-deploy`, `ags-dev`, `ags-monitor`, `ags-os`, `ags-status` | `D:\ags-dev-os\skills\` |
-| `vjr-os`, `vjr-marketing`, `vjr-status`, `vjr-acquire-leads`, `vjr-deliver-project`, `vjr-quote-to-cash` | `Desktop\Repository\VJR-Digital-Solutions\skills\` |
+| `vjr-os`, `vjr-marketing`, `vjr-status`, `vjr-acquire-leads`, `vjr-deliver-project`, `vjr-quote-to-cash`, `vjr-client-sync`, `vjr-community-sync`, `vjr-notify-openclaw`, `vjr-legal-case-file`, `wacli-msg` | `~/Desktop/VJR-Digital-Solutions/skills/` (macOS) / `Desktop\Repository\VJR-Digital-Solutions\skills\` (Windows) |
 
 Some skills also assume machine-specific tooling: `gh.exe` at
 `/mnt/c/Program Files/GitHub CLI/`, a local Qwen3 gateway on `127.0.0.1:8787`, and a

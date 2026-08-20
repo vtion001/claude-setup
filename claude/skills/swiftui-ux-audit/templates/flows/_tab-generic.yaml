@@ -1,0 +1,26 @@
+# Generic tab-navigation flow. The skill substitutes {{TAB_LABEL}} and
+# {{BUNDLE_ID}} before invocation.
+#
+# Maestro will:
+#   1. Launch the app fresh
+#   2. Wait for the launch animation to settle
+#   3. Tap the named tab in the tab bar (by visible text)
+#   4. Take a screenshot for the audit
+#   5. Idle 1s in case any landing-screen animation runs
+#   6. Screenshot again — diff lets the AI see whether transitions actually run
+appId: {{BUNDLE_ID}}
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "{{TAB_LABEL}}"
+    optional: true            # if the tab isn't reachable by label, the
+                              # skill falls back to coordinate taps
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: tab_{{TAB_LABEL}}_after_nav
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: tab_{{TAB_LABEL}}_settled

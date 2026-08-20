@@ -1,0 +1,23 @@
+# Maestro flow: Flights tab.
+appId: {{BUNDLE_ID}}
+---
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: "Flights"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: flights_landing
+- tapOn:
+    id: "addFlight"
+    optional: true
+- tapOn:
+    text: "Add"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: flights_add_sheet
+- back

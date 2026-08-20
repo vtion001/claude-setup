@@ -1,0 +1,4 @@
+.env
+lib/assets/music/*.mp3
+work/
+*.mp4

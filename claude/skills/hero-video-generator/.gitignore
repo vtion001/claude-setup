@@ -1,0 +1,7 @@
+.env
+*.mp4
+work/
+img/
+clips/
+*.json
+!package.json

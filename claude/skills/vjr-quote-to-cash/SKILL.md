@@ -27,3 +27,16 @@ python3 vjros.py process quote-to-cash \
 ```
 
 Then confirm the three PDFs in `clients/acme/` and the new stage via `vjros status --client "Acme"`.
+
+## Troubleshooting: `RuntimeError: No Chromium found`
+
+`agents/business-ops/lib/pdf.py`'s `find_chromium()` only checks Linux-shaped paths
+(`~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome`, `/usr/bin/chromium*`) — it never
+matches macOS's actual Playwright cache layout (`~/Library/Caches/ms-playwright/...`) or a bare
+Chrome install, so PDF rendering fails on every run on this machine unless `CHROME_PATH` is set
+explicitly (confirmed 14 Aug 2026, reproduced across two separate render calls):
+```bash
+export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+```
+Set it before invoking `vjros.py process quote-to-cash` (or any other script that calls
+`lib/pdf.py`'s `render_pdf`/`render_html`) — not a one-off fix for a single client run.
