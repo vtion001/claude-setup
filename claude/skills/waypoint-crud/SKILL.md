@@ -361,13 +361,28 @@ pattern rather than looping the CLI helper call-by-call — one process is faste
 itself is the audit trail of exactly what got written (confirmed effective 14 Aug 2026: ~150
 requests across create/patch/label/post for a 3-project, 68-item seed).
 
-**When a task spans multiple independent projects** (e.g. "do a comprehensive pass on all N
-projects"), dispatching one subagent per project in parallel is safe — confirmed 15 Aug 2026 via
-`subagent-driven-development` for a 3-project time-and-motion pass. Unlike code implementers
-sharing a branch, separate Waypoint projects have no shared state to conflict over. Give each
-subagent the project's own ID, the relevant known evidence from the session so far, and the
-"never fabricate a date" hard rule; have the controller re-GET and spot-check each project's
-result independently afterward rather than relaying subagent self-reports as verified fact.
+**Parallel subagent dispatch is safe under two different shapes — keep them straight:**
+- *One subagent per Waypoint project* (e.g. "do a comprehensive pass on all N projects") —
+  confirmed 15 Aug 2026 via `subagent-driven-development` for a 3-project time-and-motion pass.
+  Separate projects have no shared state to conflict over. Give each subagent the project's own
+  ID, known evidence so far, and the "never fabricate a date" rule.
+- *One subagent per independent deliverable, none of them touching Waypoint at all* — confirmed
+  20 Aug 2026: 4 parallel code-implementation subagents, each scoped to a different directory in
+  the same repo, explicitly instructed not to write to the tracker themselves. The controller was
+  the only one who wrote to Waypoint, and only after independently **re-running** each subagent's
+  claimed verification command (their test suite) — not trusting the subagent's self-reported
+  numbers. This is the stronger version of the rule below: it's not enough to re-GET after your
+  own PATCH: when a subagent supplies the evidence a PATCH will cite (a test count, a "153 passed"
+  claim), reproduce that evidence yourself before writing it into a description.
+
+Either shape, the same close-out applies: re-GET and spot-check every touched item afterward
+rather than relaying any self-report — your own or a subagent's — as verified fact.
+
+**Building multi-field/multi-item payloads:** for more than one or two simple fields, write the
+JSON body via a Python one-liner (`json.dumps(...)` into a temp file, `curl -d @file.json`)
+rather than shell string interpolation — a description containing a quote, apostrophe, or
+markdown fence breaks shell quoting long before it breaks JSON. Cheap insurance across a
+multi-item pass (5+ PATCH/POST calls), not just for one-off complex bodies.
 
 ## Common mistakes
 

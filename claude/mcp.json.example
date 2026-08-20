@@ -1,0 +1,60 @@
+{
+  "_comment": "User-scope MCP servers from ~/.claude.json's mcpServers key, as of 2026-08-21. Real API keys/tokens are redacted to <FILL_IN> placeholders — never committed. To restore on a new machine: copy this to your ~/.claude.json's mcpServers key (or re-add each via `claude mcp add`), fill in the placeholders, then run `claude mcp list` to verify. Project-scoped MCP servers (registered per-repo via `-s local`) are NOT included here — those live in each project's own config/repo, not this portable snapshot.",
+  "mcpServers": {
+    "magic": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@21st-dev/magic@latest"],
+      "env": {
+        "API_KEY": "<FILL_IN>"
+      }
+    },
+    "apify": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@apify/actors-mcp-server",
+        "--actors",
+        "scrapemind/domaincomau-scraper,abotapi/realestate-au-scraper,scrapemind/ausscraper"
+      ],
+      "env": {
+        "APIFY_TOKEN": "<FILL_IN>"
+      }
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "heygen": {
+      "type": "http",
+      "url": "https://mcp.heygen.com/mcp/v1/"
+    },
+    "twilio-docs": {
+      "type": "http",
+      "url": "https://mcp.twilio.com/docs"
+    },
+    "shadcn": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "shadcn@latest", "mcp"]
+    },
+    "magicui": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@magicuidesign/mcp@latest"]
+    },
+    "waypoint": {
+      "type": "http",
+      "url": "http://localhost:3001/mcp",
+      "headers": {
+        "Authorization": "<FILL_IN>"
+      }
+    },
+    "notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp"
+    }
+  }
+}

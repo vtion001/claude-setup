@@ -176,6 +176,11 @@ gog gmail send --account <email> --to <recipient> \
   don't re-ask what to change**; `TIMEOUT` (2) → don't send, surface it rather than retrying.
   `--force` on the underlying `gog` command still exists for destructive ops; don't use it to skip
   this gate.
+  **The gog CLI itself enforces no gate — the rule lives entirely in this skill.** Verified 17 Aug
+  2026: `gog gmail send` fires immediately with zero prompting (with or without `--force`), so
+  nothing in the binary blocks an ungated send. Load this skill before any gated action, and treat a
+  chat "proceed"/"go ahead" from the operator as NOT satisfying the gate — the Telegram
+  Approve/Decline buttons are the only approval.
   **As of 15 Aug 2026, dispatch the whole gate→revision→redraft cycle to a subagent** rather than
   running it inline and waiting on the main session between rounds — same pattern and same
   rationale as `wacli-msg`'s own "Dispatch the whole gate-and-revision loop to a subagent" section;
@@ -193,3 +198,4 @@ gog gmail send --account <email> --to <recipient> \
 - **Joshua's production deployment:** `github.com/vtion001/joshua-openclaw` → `workspace/skills/gog/` (per his `SKILL_INDEX.md` it's marked ✅ enabled there — different OAuth client, separate from this machine's gogcli config; that directory is doc-only on the Mac-mini, no scripts dir)
 - **Email voice-training engine (2026-08-13)** — since `joshua.kim@altoproperty.com.au` is explicitly NOT connected via gog (see Auth state above), Joshua's email-reply capability is built separately, on the Mac-mini itself, via `inbox-api`'s IMAP connection rather than gog: `email_voice_engine.py` + `push_email_draft.py` in `outreach-engine/scripts/`, gated through the same `tg_approval_gate.py` pattern as this skill's own Gmail-send gate. Full writeup: `~/.claude/skills/connecting-to-alto-mac-mini/SKILL.md` → "Email voice-training engine + Drafts-folder push".
 - **gogcli config dir:** `/Users/archerterminez/Library/Application Support/gogcli/` — DO NOT delete or `rm -rf`. Contains the only copy of refresh tokens for every account in the Auth state table above, plus dead/stale credential files kept for audit; losing it forces a re-OAuth from scratch for all of them.
+- **Two live local copies of this SKILL.md** — `~/.config/opencode/skills/gog/` (opencode) and `~/.claude/skills/gog/` (Claude Code), separate files that must be edited together (confirmed 17 Aug 2026, inode-checked). `wacli-msg` avoids this by symlinking to the repo copy; gog does not — apply gate-rule edits to both copies or the two runtimes will drift.

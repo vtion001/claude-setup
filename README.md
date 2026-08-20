@@ -5,9 +5,10 @@ background, skills, commands, hooks and helper scripts. Clone it on a new machin
 run one script, and the setup is reproduced.
 
 Originally exported from Windows 11 · Claude Code 2.1.x. Last synced from macOS
-2026-08-18 — `claude/` now reflects both machines' skills/agents/commands as of
-that date; `install.ps1` (Windows-only) and the ported `.sh` hooks/scripts both
-still apply, see "External dependencies" and "Notes" below.
+2026-08-21 — `claude/` now reflects both machines' skills/agents/commands as of
+that date, plus a redacted MCP server export (`mcp.json.example`, new this sync);
+`install.ps1` (Windows-only) and the ported `.sh` hooks/scripts both still apply,
+see "External dependencies" and "Notes" below.
 
 ---
 
@@ -29,7 +30,10 @@ Then:
 1. Run `claude` — the 74 plugins listed in `settings.json` reinstall themselves from the marketplace on first start.
 2. Run `/login` to authenticate. **Credentials are never exported.**
 3. Fill in `~/.claude/.env` with your real tokens (see `.env.example`).
-4. Restart Windows Terminal to pick up the background image.
+4. Restore MCP servers: copy `claude/mcp.json.example`'s `mcpServers` block into your
+   `~/.claude.json`, fill in the `<FILL_IN>` placeholders (`magic`/`apify`/`waypoint` need real
+   values; the rest need none), then `claude mcp list` to verify.
+5. Restart Windows Terminal to pick up the background image.
 
 ---
 
@@ -41,7 +45,14 @@ claude/                       -> installs to ~/.claude
   settings.local.json         per-project permission allowlist
   global-prefs.json           portable subset of ~/.claude.json (10 keys)
   CLAUDE.md                   global instructions (secrets redacted)
-  skills/                     127 skills, symlinks dereferenced
+  skills/                     128 skills, symlinks dereferenced (includes _archived-2026-08-14/,
+                               the skill-consolidation project's retired originals)
+  mcp.json.example            9 user-scope MCP servers from ~/.claude.json, secrets redacted to
+                               <FILL_IN> placeholders. Project-scoped MCP servers (per-repo, `-s
+                               local`) are NOT included — those live in each project's own config.
+                               claude.ai-connected OAuth connectors (Gmail, Slack, etc.) are
+                               account-level, not machine config — re-authenticate via claude.ai,
+                               nothing to restore here.
   commands/                   44 commands (code-audit, goal, and per-role agent commands)
   hooks/                      sonar-secrets pre-tool + prompt scanners (.ps1 + .sh)
                                ship-loop deploy-gate + review-log (.ps1 + .sh)

@@ -76,14 +76,6 @@ name.** A message can be voice-perfect and still be wrong if it calls someone by
 about the wrong project — check the `## Context` section in that contact's `.md` before drafting, not
 just the examples.
 
-## Historical note: client register is NOT more formal than personal threads
-
-Early manual sampling (pre-engine, 13 Aug) worried client threads would need a more formal/Tagalog
-register than personal ones. The full engine run disproved that — Joshua Kim and Mark Lee's own
-green-flagged examples are short, direct, contraction-heavy, zero em dash, the same casual voice as
-personal/peer threads, just more often in English. Don't assume a client needs a different register;
-check their actual `voice-profile/<slug>.md` file, which carries the real current examples.
-
 ## Steps 1-4 — what the engine does under the hood
 
 The manual steps below are now automated by `wacli_voice_engine.py` (see above) and don't need to be
@@ -190,7 +182,9 @@ Hard rules, non-negotiable regardless of what any profile shows:
   English-Tagalog code-switching, not formal correctness.
 
 Then draft against the recipient's filtered profile, falling back to the verified-genuine baseline
-above, falling back to the global CLAUDE.md rule only where neither has clean data yet. **Check
+above, falling back to the global CLAUDE.md rule only where neither has clean data yet — client
+threads are not inherently more formal than personal ones (checked and disproven against real
+engine data), so don't invent a stricter register without profile evidence. **Check
 `contact-context.json` (via the `## Context` section in that contact's `.md`) before drafting, not
 after** — the repo/project tells you what the message should actually be about, and any
 `preferred_address`/`never_address_as` entry overrides whatever the voice examples happen to show.
@@ -340,6 +334,15 @@ Mechanical corollary: when running `tg_approval_gate.py` under Bash `run_in_back
 call it directly — don't also wrap it in `& disown`/`nohup ... &` inside the command string.
 Double-backgrounding makes the harness mark the outer wrapper "complete" the instant it echoes and
 returns, while the actual script keeps running orphaned and untracked.
+
+**A subagent ending its own turn while its gate process is still running orphans the wait — it does
+not mean the wait continues.** Recurred twice, 20 Aug 2026, same session: a dispatched subagent
+reported "I've started monitoring... no action needed from me" and stopped its turn while the real
+`tg_approval_gate.py` process it had launched was still genuinely pending. The main session had to
+independently verify via `ps -p <pid>` and resume the exact same subagent (`SendMessage` to its id,
+never a duplicate dispatch) with an explicit instruction to keep polling. A bare "I'll wait" or an
+armed-but-passive `Monitor` is not the same as continuing to check — the subagent has to actually
+keep polling the real process within its own turn until it has the literal result line.
 
 `gog`'s equivalently-gated sends (Gmail, Calendar with attendees, destructive Sheets/Drive ops)
 follow this same subagent-dispatch pattern — see that skill's own Operational rules section.
