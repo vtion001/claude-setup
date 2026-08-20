@@ -1,0 +1,10 @@
+{
+  "name": "gog-skill-scripts",
+  "version": "1.0.0",
+  "description": "Helper scripts for the gog skill: md-to-pdf consolidation guardrail (Telegram approval gate is plain bash+curl, no deps).",
+  "private": true,
+  "dependencies": {
+    "marked": "^18.0.9",
+    "playwright": "^1.62.1"
+  }
+}
